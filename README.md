@@ -15,6 +15,7 @@ Este proyecto forma parte de mi portfolio como desarrollador backend junior, apl
 - Entity Framework Core
 - PostgreSQL
 - Docker
+- Docker Compose
 - JWT Authentication
 - BCrypt
 - Swagger / OpenAPI
@@ -300,18 +301,32 @@ Excepciones personalizadas implementadas:
 
 ## Base de datos
 
-El proyecto utiliza PostgreSQL levantado con Docker.
+El proyecto utiliza PostgreSQL levantado con Docker Compose.
 
-Ejemplo para crear el contenedor:
+Para iniciar la base de datos:
 
 ```powershell
-docker run --name taskflowpro-postgres `
-  -e POSTGRES_USER=postgres `
-  -e POSTGRES_PASSWORD=postgres `
-  -e POSTGRES_DB=taskflowpro_db `
-  -p 5433:5432 `
-  -d postgres:16
+docker compose up -d
 ```
+
+Para detener la base de datos:
+
+```powershell
+docker compose down
+```
+
+El servicio PostgreSQL queda disponible en:
+
+```text
+localhost:5433
+```
+
+El archivo `docker-compose.yml` crea:
+
+- Base de datos: `taskflowpro_db`
+- Usuario: `postgres`
+- Password: `postgres`
+- Puerto local: `5433`
 
 Connection string utilizada en desarrollo:
 
@@ -423,6 +438,5 @@ Comments
 - Filtros y paginación.
 - Tests unitarios.
 - Tests de integración.
-- Docker Compose.
 - Deploy en la nube.
 - Frontend web.

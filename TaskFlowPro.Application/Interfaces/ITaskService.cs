@@ -42,4 +42,10 @@ public interface ITaskService
         Guid currentUserId,
         Guid taskId
     );
+
+    Task<TaskResponse> AssignAsync(
+        Guid currentUserId,
+        Guid taskId,
+        AssignTaskRequest request
+    );
 }

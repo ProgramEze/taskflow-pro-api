@@ -111,6 +111,22 @@ public class TasksController : ControllerBase
         return Ok(response);
     }
 
+    [HttpPatch("api/tasks/{taskId:guid}/assign")]
+    public async Task<IActionResult> Assign(
+    Guid taskId,
+    AssignTaskRequest request)
+    {
+        var currentUserId = User.GetCurrentUserId();
+
+        var response = await _taskService.AssignAsync(
+            currentUserId,
+            taskId,
+            request
+        );
+
+        return Ok(response);
+    }
+
     [HttpDelete("api/tasks/{taskId:guid}")]
     public async Task<IActionResult> Delete(Guid taskId)
     {

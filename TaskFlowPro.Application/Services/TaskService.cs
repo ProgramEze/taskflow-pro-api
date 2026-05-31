@@ -242,6 +242,46 @@ public class TaskService : ITaskService
         await _taskRepository.UpdateAsync(task);
     }
 
+    public async Task<TaskResponse> AssignAsync(
+    Guid currentUserId,
+    Guid taskId,
+    AssignTaskRequest request)
+    {
+        var task = await _taskRepository.GetByIdAsync(taskId);
+
+        if (task is null || !task.IsActive)
+            throw new NotFoundException("Tarea no encontrada.");
+
+        if (task.Project.Workspace is null || !task.Project.Workspace.IsActive)
+            throw new NotFoundException("Workspace no encontrado.");
+
+        if (task.Project.Status == ProjectStatus.Archived)
+            throw new BadRequestException("No se puede asignar una tarea de un proyecto archivado.");
+
+        var currentMember = task.Project.Workspace.Members.FirstOrDefault(member =>
+            member.UserId == currentUserId &&
+            member.IsActive);
+
+        if (currentMember is null)
+            throw new ForbiddenException("No tenés permiso para asignar esta tarea.");
+
+        if (currentMember.Role is not WorkspaceRole.Owner and not WorkspaceRole.Admin)
+            throw new ForbiddenException("Solo Owner o Admin pueden asignar tareas.");
+
+        var assignedMember = task.Project.Workspace.Members.FirstOrDefault(member =>
+            member.UserId == request.AssignedUserId &&
+            member.IsActive);
+
+        if (assignedMember is null)
+            throw new BadRequestException("El usuario asignado no pertenece a este workspace.");
+
+        task.AssignedUserId = request.AssignedUserId;
+
+        await _taskRepository.UpdateAsync(task);
+
+        return ToResponse(task);
+    }
+
     private static TaskResponse ToResponse(TaskItem task)
     {
         return new TaskResponse

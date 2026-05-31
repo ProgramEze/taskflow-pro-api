@@ -2,9 +2,9 @@
 
 TaskFlow Pro es una API REST desarrollada con ASP.NET Core para la gestión colaborativa de proyectos y tareas en equipos pequeños.
 
-El proyecto permite registrar usuarios, iniciar sesión con JWT, crear espacios de trabajo, administrar proyectos, crear tareas, modificar su estado y prioridad, editar tareas, realizar bajas lógicas y agregar comentarios.
+El proyecto permite registrar usuarios, iniciar sesión con JWT, crear espacios de trabajo, administrar proyectos, gestionar miembros, crear tareas, asignarlas a usuarios, modificar su estado y prioridad, realizar bajas lógicas y agregar comentarios.
 
-Este proyecto forma parte de mi portfolio como desarrollador backend junior, aplicando buenas prácticas de arquitectura, autenticación, autorización, persistencia de datos y documentación de API.
+Este proyecto forma parte de mi portfolio como desarrollador backend junior, aplicando buenas prácticas de arquitectura, autenticación, autorización, persistencia de datos, manejo global de errores y documentación de API.
 
 ---
 
@@ -108,6 +108,28 @@ GET /api/Workspaces/{workspaceId}
 
 ---
 
+### Workspace Members
+
+- Agregar miembros a un workspace por email.
+- Listar miembros de un workspace.
+- Cambiar rol de un miembro.
+- Quitar miembros mediante baja lógica.
+- Validación de permisos según rol.
+- Solo Owner/Admin pueden agregar o quitar miembros.
+- Solo Owner puede cambiar roles.
+- No se puede quitar ni modificar el rol del Owner.
+
+Endpoints principales:
+
+```http
+POST /api/workspaces/{workspaceId}/members
+GET /api/workspaces/{workspaceId}/members
+PUT /api/workspaces/{workspaceId}/members/{memberId}/role
+DELETE /api/workspaces/{workspaceId}/members/{memberId}
+```
+
+---
+
 ### Projects
 
 - Crear proyectos dentro de un workspace.
@@ -134,6 +156,7 @@ GET /api/projects/{projectId}
 - Cambiar prioridad de tarea.
 - Editar tarea.
 - Baja lógica de tarea.
+- Asignar tareas a miembros activos del workspace.
 
 Endpoints principales:
 
@@ -143,6 +166,7 @@ GET /api/projects/{projectId}/tasks
 GET /api/tasks/{taskId}
 PATCH /api/tasks/{taskId}/status
 PATCH /api/tasks/{taskId}/priority
+PATCH /api/tasks/{taskId}/assign
 PUT /api/tasks/{taskId}
 DELETE /api/tasks/{taskId}
 ```
@@ -176,6 +200,8 @@ User
   ↓
 Workspace
   ↓
+WorkspaceMember
+  ↓
 Project
   ↓
 TaskItem
@@ -184,13 +210,15 @@ Comment
 ```
 
 Un usuario puede crear workspaces.
+Un workspace contiene miembros.
 Un workspace contiene proyectos.
 Un proyecto contiene tareas.
+Una tarea puede asignarse a un miembro activo del workspace.
 Una tarea puede tener comentarios.
 
 ---
 
-## Enums principales
+## Roles y permisos
 
 ### WorkspaceRole
 
@@ -199,6 +227,20 @@ Una tarea puede tener comentarios.
 2 = Admin
 3 = Member
 ```
+
+Reglas principales implementadas:
+
+- El usuario que crea un workspace queda registrado automáticamente como Owner.
+- Owner/Admin pueden agregar miembros.
+- Owner/Admin pueden quitar miembros.
+- Solo Owner puede cambiar roles.
+- No se puede quitar al Owner del workspace.
+- No se puede modificar el rol del Owner desde el endpoint de cambio de rol.
+- Una tarea solo puede asignarse a un usuario que sea miembro activo del workspace.
+
+---
+
+## Enums principales
 
 ### ProjectStatus
 
@@ -341,6 +383,11 @@ Se probaron los flujos principales desde Swagger:
 - Creación y listado de proyectos.
 - Creación, edición, cambio de estado, cambio de prioridad y baja lógica de tareas.
 - Creación, edición, listado y baja lógica de comentarios.
+- Gestión de miembros del workspace.
+- Cambio de roles de miembros.
+- Baja lógica de miembros.
+- Asignación de tareas a miembros activos del workspace.
+- Validación de error al intentar asignar una tarea a un usuario externo al workspace.
 - Manejo de errores mediante middleware global.
 
 ---
@@ -352,16 +399,27 @@ Proyecto en desarrollo.
 Actualmente implementa el flujo principal:
 
 ```text
-Autenticación → Workspaces → Projects → Tasks → Comments
+Autenticación
+  ↓
+Workspaces
+  ↓
+Members
+  ↓
+Projects
+  ↓
+Tasks
+  ↓
+Assignment
+  ↓
+Comments
 ```
 
 ---
 
 ## Próximas mejoras
 
-- Gestión de miembros del workspace.
-- Roles y permisos más específicos.
-- Asignación de tareas a miembros.
+- Permisos más específicos por rol.
+- Autoasignación de tareas para miembros.
 - Filtros y paginación.
 - Tests unitarios.
 - Tests de integración.

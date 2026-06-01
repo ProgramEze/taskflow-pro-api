@@ -11,15 +11,18 @@ public class WorkspaceMemberService : IWorkspaceMemberService
     private readonly IWorkspaceRepository _workspaceRepository;
     private readonly IWorkspaceMemberRepository _memberRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IWorkspaceAuthorizationService _workspaceAuthorizationService;
 
     public WorkspaceMemberService(
         IWorkspaceRepository workspaceRepository,
         IWorkspaceMemberRepository memberRepository,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        IWorkspaceAuthorizationService workspaceAuthorizationService)
     {
         _workspaceRepository = workspaceRepository;
         _memberRepository = memberRepository;
         _userRepository = userRepository;
+        _workspaceAuthorizationService = workspaceAuthorizationService;
     }
 
     public async Task<WorkspaceMemberResponse> AddMemberAsync(
@@ -32,15 +35,10 @@ public class WorkspaceMemberService : IWorkspaceMemberService
         if (workspace is null || !workspace.IsActive)
             throw new NotFoundException("Workspace no encontrado.");
 
-        var currentMember = workspace.Members.FirstOrDefault(member =>
-            member.UserId == currentUserId &&
-            member.IsActive);
-
-        if (currentMember is null)
-            throw new ForbiddenException("No pertenecés a este workspace.");
-
-        if (currentMember.Role is not WorkspaceRole.Owner and not WorkspaceRole.Admin)
-            throw new ForbiddenException("No tenés permiso para agregar miembros.");
+        _workspaceAuthorizationService.EnsureOwnerOrAdmin(
+            workspace,
+            currentUserId
+        );
 
         if (string.IsNullOrWhiteSpace(request.Email))
             throw new BadRequestException("El email del usuario es obligatorio.");
@@ -68,7 +66,12 @@ public class WorkspaceMemberService : IWorkspaceMemberService
 
             await _memberRepository.UpdateAsync(existingMember);
 
-            return ToResponse(existingMember);
+            var reactivatedMember = await _memberRepository.GetByIdAsync(existingMember.Id);
+
+            if (reactivatedMember is null)
+                throw new NotFoundException("Miembro no encontrado.");
+
+            return ToResponse(reactivatedMember);
         }
 
         var newMember = new WorkspaceMember
@@ -100,12 +103,10 @@ public class WorkspaceMemberService : IWorkspaceMemberService
         if (workspace is null || !workspace.IsActive)
             throw new NotFoundException("Workspace no encontrado.");
 
-        var isMember = workspace.Members.Any(member =>
-            member.UserId == currentUserId &&
-            member.IsActive);
-
-        if (!isMember)
-            throw new ForbiddenException("No tenés permiso para ver los miembros de este workspace.");
+        _workspaceAuthorizationService.EnsureMember(
+            workspace,
+            currentUserId
+        );
 
         var members = await _memberRepository.GetByWorkspaceIdAsync(workspaceId);
 
@@ -126,15 +127,10 @@ public class WorkspaceMemberService : IWorkspaceMemberService
         if (workspace is null || !workspace.IsActive)
             throw new NotFoundException("Workspace no encontrado.");
 
-        var currentMember = workspace.Members.FirstOrDefault(member =>
-            member.UserId == currentUserId &&
-            member.IsActive);
-
-        if (currentMember is null)
-            throw new ForbiddenException("No pertenecés a este workspace.");
-
-        if (currentMember.Role != WorkspaceRole.Owner)
-            throw new ForbiddenException("Solo el Owner puede cambiar roles.");
+        _workspaceAuthorizationService.EnsureOwner(
+            workspace,
+            currentUserId
+        );
 
         if (!Enum.IsDefined(typeof(WorkspaceRole), request.Role))
             throw new BadRequestException("Rol inválido.");
@@ -157,7 +153,12 @@ public class WorkspaceMemberService : IWorkspaceMemberService
 
         await _memberRepository.UpdateAsync(memberToUpdate);
 
-        return ToResponse(memberToUpdate);
+        var updatedMember = await _memberRepository.GetByIdAsync(memberToUpdate.Id);
+
+        if (updatedMember is null)
+            throw new NotFoundException("Miembro no encontrado.");
+
+        return ToResponse(updatedMember);
     }
 
     public async Task RemoveMemberAsync(
@@ -170,15 +171,13 @@ public class WorkspaceMemberService : IWorkspaceMemberService
         if (workspace is null || !workspace.IsActive)
             throw new NotFoundException("Workspace no encontrado.");
 
-        var currentMember = workspace.Members.FirstOrDefault(member =>
-            member.UserId == currentUserId &&
-            member.IsActive);
-
-        if (currentMember is null)
-            throw new ForbiddenException("No pertenecés a este workspace.");
+        var currentMember = _workspaceAuthorizationService.GetCurrentMemberOrThrow(
+            workspace,
+            currentUserId
+        );
 
         if (currentMember.Role is not WorkspaceRole.Owner and not WorkspaceRole.Admin)
-            throw new ForbiddenException("No tenés permiso para quitar miembros.");
+            throw new ForbiddenException("Solo Owner o Admin pueden realizar esta acción.");
 
         var memberToRemove = await _memberRepository.GetByIdAsync(memberId);
 

@@ -14,6 +14,7 @@ public class WorkspaceMemberServiceTests
     private readonly Mock<IWorkspaceRepository> _workspaceRepositoryMock;
     private readonly Mock<IWorkspaceMemberRepository> _memberRepositoryMock;
     private readonly Mock<IUserRepository> _userRepositoryMock;
+    private readonly Mock<IWorkspaceAuthorizationService> _workspaceAuthorizationServiceMock;
     private readonly WorkspaceMemberService _service;
 
     public WorkspaceMemberServiceTests()
@@ -21,11 +22,13 @@ public class WorkspaceMemberServiceTests
         _workspaceRepositoryMock = new Mock<IWorkspaceRepository>();
         _memberRepositoryMock = new Mock<IWorkspaceMemberRepository>();
         _userRepositoryMock = new Mock<IUserRepository>();
+        _workspaceAuthorizationServiceMock = new Mock<IWorkspaceAuthorizationService>();
 
         _service = new WorkspaceMemberService(
             _workspaceRepositoryMock.Object,
             _memberRepositoryMock.Object,
-            _userRepositoryMock.Object
+            _userRepositoryMock.Object,
+            _workspaceAuthorizationServiceMock.Object
         );
     }
 
@@ -101,6 +104,11 @@ public class WorkspaceMemberServiceTests
         result.Role.Should().Be(WorkspaceRole.Member);
         result.IsActive.Should().BeTrue();
 
+        _workspaceAuthorizationServiceMock.Verify(
+            service => service.EnsureOwnerOrAdmin(workspace, ownerId),
+            Times.Once
+        );
+
         _memberRepositoryMock.Verify(
             repository => repository.AddAsync(It.IsAny<WorkspaceMember>()),
             Times.Once
@@ -129,6 +137,10 @@ public class WorkspaceMemberServiceTests
             .Setup(repository => repository.GetByIdAsync(workspaceId))
             .ReturnsAsync(workspace);
 
+        _workspaceAuthorizationServiceMock
+            .Setup(service => service.EnsureOwnerOrAdmin(workspace, memberId))
+            .Throws(new ForbiddenException("Solo Owner o Admin pueden realizar esta acción."));
+
         // Act
         var act = async () => await _service.AddMemberAsync(
             memberId,
@@ -139,7 +151,7 @@ public class WorkspaceMemberServiceTests
         // Assert
         await act.Should()
             .ThrowAsync<ForbiddenException>()
-            .WithMessage("No tenés permiso para agregar miembros.");
+            .WithMessage("Solo Owner o Admin pueden realizar esta acción.");
 
         _memberRepositoryMock.Verify(
             repository => repository.AddAsync(It.IsAny<WorkspaceMember>()),
@@ -209,6 +221,11 @@ public class WorkspaceMemberServiceTests
             .ThrowAsync<ConflictException>()
             .WithMessage("El usuario ya pertenece a este workspace.");
 
+        _workspaceAuthorizationServiceMock.Verify(
+            service => service.EnsureOwnerOrAdmin(workspace, ownerId),
+            Times.Once
+        );
+
         _memberRepositoryMock.Verify(
             repository => repository.AddAsync(It.IsAny<WorkspaceMember>()),
             Times.Never
@@ -275,6 +292,11 @@ public class WorkspaceMemberServiceTests
         result.Should().NotBeNull();
         result.Role.Should().Be(WorkspaceRole.Admin);
 
+        _workspaceAuthorizationServiceMock.Verify(
+            service => service.EnsureOwner(workspace, ownerId),
+            Times.Once
+        );
+
         _memberRepositoryMock.Verify(
             repository => repository.UpdateAsync(It.Is<WorkspaceMember>(
                 member => member.Role == WorkspaceRole.Admin
@@ -306,6 +328,10 @@ public class WorkspaceMemberServiceTests
             .Setup(repository => repository.GetByIdAsync(workspaceId))
             .ReturnsAsync(workspace);
 
+        _workspaceAuthorizationServiceMock
+            .Setup(service => service.EnsureOwner(workspace, adminId))
+            .Throws(new ForbiddenException("Solo el Owner puede realizar esta acción."));
+
         // Act
         var act = async () => await _service.ChangeRoleAsync(
             adminId,
@@ -317,7 +343,7 @@ public class WorkspaceMemberServiceTests
         // Assert
         await act.Should()
             .ThrowAsync<ForbiddenException>()
-            .WithMessage("Solo el Owner puede cambiar roles.");
+            .WithMessage("Solo el Owner puede realizar esta acción.");
 
         _memberRepositoryMock.Verify(
             repository => repository.UpdateAsync(It.IsAny<WorkspaceMember>()),
@@ -381,6 +407,11 @@ public class WorkspaceMemberServiceTests
             .ThrowAsync<BadRequestException>()
             .WithMessage("No se puede modificar el rol del Owner.");
 
+        _workspaceAuthorizationServiceMock.Verify(
+            service => service.EnsureOwner(workspace, ownerId),
+            Times.Once
+        );
+
         _memberRepositoryMock.Verify(
             repository => repository.UpdateAsync(It.IsAny<WorkspaceMember>()),
             Times.Never
@@ -402,6 +433,8 @@ public class WorkspaceMemberServiceTests
             WorkspaceRole.Owner
         );
 
+        var currentMember = workspace.Members.First(member => member.UserId == ownerId);
+
         var memberToRemove = new WorkspaceMember
         {
             Id = memberId,
@@ -422,6 +455,10 @@ public class WorkspaceMemberServiceTests
             .Setup(repository => repository.GetByIdAsync(workspaceId))
             .ReturnsAsync(workspace);
 
+        _workspaceAuthorizationServiceMock
+            .Setup(service => service.GetCurrentMemberOrThrow(workspace, ownerId))
+            .Returns(currentMember);
+
         _memberRepositoryMock
             .Setup(repository => repository.GetByIdAsync(memberId))
             .ReturnsAsync(memberToRemove);
@@ -439,6 +476,11 @@ public class WorkspaceMemberServiceTests
 
         // Assert
         memberToRemove.IsActive.Should().BeFalse();
+
+        _workspaceAuthorizationServiceMock.Verify(
+            service => service.GetCurrentMemberOrThrow(workspace, ownerId),
+            Times.Once
+        );
 
         _memberRepositoryMock.Verify(
             repository => repository.UpdateAsync(It.Is<WorkspaceMember>(
@@ -462,6 +504,8 @@ public class WorkspaceMemberServiceTests
             WorkspaceRole.Owner
         );
 
+        var currentMember = workspace.Members.First(member => member.UserId == ownerId);
+
         var ownerMember = new WorkspaceMember
         {
             Id = ownerMemberId,
@@ -482,6 +526,10 @@ public class WorkspaceMemberServiceTests
             .Setup(repository => repository.GetByIdAsync(workspaceId))
             .ReturnsAsync(workspace);
 
+        _workspaceAuthorizationServiceMock
+            .Setup(service => service.GetCurrentMemberOrThrow(workspace, ownerId))
+            .Returns(currentMember);
+
         _memberRepositoryMock
             .Setup(repository => repository.GetByIdAsync(ownerMemberId))
             .ReturnsAsync(ownerMember);
@@ -497,6 +545,11 @@ public class WorkspaceMemberServiceTests
         await act.Should()
             .ThrowAsync<BadRequestException>()
             .WithMessage("No se puede quitar al Owner del workspace.");
+
+        _workspaceAuthorizationServiceMock.Verify(
+            service => service.GetCurrentMemberOrThrow(workspace, ownerId),
+            Times.Once
+        );
 
         _memberRepositoryMock.Verify(
             repository => repository.UpdateAsync(It.IsAny<WorkspaceMember>()),

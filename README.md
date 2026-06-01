@@ -468,7 +468,9 @@ Ejecutar tests:
 dotnet test
 ```
 
-Actualmente se incluyen pruebas unitarias para `TaskService`, cubriendo casos como:
+Actualmente se incluyen pruebas unitarias para:
+
+### TaskService
 
 - Crear una tarea correctamente.
 - Lanzar `NotFoundException` cuando el proyecto no existe.
@@ -476,14 +478,25 @@ Actualmente se incluyen pruebas unitarias para `TaskService`, cubriendo casos co
 - Lanzar `BadRequestException` cuando el título de la tarea está vacío.
 - Devolver tareas paginadas correctamente.
 
+### WorkspaceMemberService
+
+- Agregar un miembro cuando el usuario actual es Owner.
+- Lanzar `ForbiddenException` cuando un Member intenta agregar miembros.
+- Lanzar `ConflictException` cuando el usuario ya pertenece al workspace.
+- Cambiar el rol de un miembro cuando el usuario actual es Owner.
+- Lanzar `ForbiddenException` cuando un Admin intenta cambiar roles.
+- Lanzar `BadRequestException` al intentar modificar el rol del Owner.
+- Quitar un miembro cuando el usuario actual es Owner.
+- Lanzar `BadRequestException` al intentar quitar al Owner.
+
 Resultado esperado:
 
 ```text
 Correctas!
 Con error: 0
-Superado: 5
+Superado: 13
 Omitido: 0
-Total: 5
+Total: 13
 ```
 
 ---

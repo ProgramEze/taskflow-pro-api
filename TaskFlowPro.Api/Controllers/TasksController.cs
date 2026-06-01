@@ -38,13 +38,16 @@ public class TasksController : ControllerBase
     }
 
     [HttpGet("api/projects/{projectId:guid}/tasks")]
-    public async Task<IActionResult> GetByProjectId(Guid projectId)
+    public async Task<IActionResult> GetByProjectId(
+    Guid projectId,
+    [FromQuery] TaskQueryParameters query)
     {
         var currentUserId = User.GetCurrentUserId();
 
         var response = await _taskService.GetByProjectIdAsync(
             currentUserId,
-            projectId
+            projectId,
+            query
         );
 
         return Ok(response);

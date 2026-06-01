@@ -2,9 +2,9 @@
 
 TaskFlow Pro es una API REST desarrollada con ASP.NET Core para la gestión colaborativa de proyectos y tareas en equipos pequeños.
 
-El proyecto permite registrar usuarios, iniciar sesión con JWT, crear espacios de trabajo, administrar proyectos, gestionar miembros, crear tareas, asignarlas a usuarios, modificar su estado y prioridad, realizar bajas lógicas y agregar comentarios.
+El proyecto permite registrar usuarios, iniciar sesión con JWT, crear espacios de trabajo, administrar proyectos, gestionar miembros, crear tareas, asignarlas a usuarios, modificar su estado y prioridad, realizar bajas lógicas, agregar comentarios, y consultar tareas mediante filtros, búsqueda y paginación.
 
-Este proyecto forma parte de mi portfolio como desarrollador backend junior, aplicando buenas prácticas de arquitectura, autenticación, autorización, persistencia de datos, manejo global de errores y documentación de API.
+Este proyecto forma parte de mi portfolio como desarrollador backend junior, aplicando buenas prácticas de arquitectura, autenticación, autorización, persistencia de datos, manejo global de errores, documentación de API y consultas paginadas.
 
 ---
 
@@ -53,6 +53,7 @@ Contiene la lógica de aplicación:
 - Interfaces
 - Services
 - Excepciones personalizadas
+- Modelos de respuesta paginada
 
 ### TaskFlowPro.Domain
 
@@ -158,6 +159,11 @@ GET /api/projects/{projectId}
 - Editar tarea.
 - Baja lógica de tarea.
 - Asignar tareas a miembros activos del workspace.
+- Filtrar tareas por estado.
+- Filtrar tareas por prioridad.
+- Filtrar tareas por usuario asignado.
+- Buscar tareas por texto en título o descripción.
+- Paginar resultados.
 
 Endpoints principales:
 
@@ -170,6 +176,51 @@ PATCH /api/tasks/{taskId}/priority
 PATCH /api/tasks/{taskId}/assign
 PUT /api/tasks/{taskId}
 DELETE /api/tasks/{taskId}
+```
+
+Ejemplo de listado con filtros y paginación:
+
+```http
+GET /api/projects/{projectId}/tasks?status=1&priority=3&pageNumber=1&pageSize=10
+```
+
+Parámetros disponibles:
+
+```text
+status          Filtra por estado de tarea
+priority        Filtra por prioridad
+assignedUserId  Filtra por usuario asignado
+search          Busca texto en título o descripción
+pageNumber      Número de página
+pageSize        Cantidad de elementos por página
+```
+
+Ejemplo de respuesta paginada:
+
+```json
+{
+    "items": [
+        {
+            "id": "609b1dec-95c8-4e19-b15f-f127b8f3e474",
+            "projectId": "aed14075-fdf6-4417-8f06-baeed9196626",
+            "title": "Diseñar endpoints de autenticación",
+            "description": "Crear endpoints de registro, login y obtención del usuario autenticado",
+            "status": 2,
+            "priority": 3,
+            "createdByUserId": "50185452-dfe4-4120-9fce-5b172bf78169",
+            "assignedUserId": "50185452-dfe4-4120-9fce-5b172bf78169",
+            "createdAt": "2026-05-31T23:43:50.562629Z",
+            "dueDate": "2026-06-15T00:00:00Z",
+            "isActive": true
+        }
+    ],
+    "pageNumber": 1,
+    "pageSize": 10,
+    "totalItems": 1,
+    "totalPages": 1,
+    "hasPreviousPage": false,
+    "hasNextPage": false
+}
 ```
 
 ---
@@ -238,6 +289,7 @@ Reglas principales implementadas:
 - No se puede quitar al Owner del workspace.
 - No se puede modificar el rol del Owner desde el endpoint de cambio de rol.
 - Una tarea solo puede asignarse a un usuario que sea miembro activo del workspace.
+- Solo Owner/Admin pueden asignar tareas.
 
 ---
 
@@ -403,6 +455,10 @@ Se probaron los flujos principales desde Swagger:
 - Baja lógica de miembros.
 - Asignación de tareas a miembros activos del workspace.
 - Validación de error al intentar asignar una tarea a un usuario externo al workspace.
+- Listado paginado de tareas.
+- Filtros de tareas por estado, prioridad y usuario asignado.
+- Búsqueda de tareas por texto.
+- Validación de errores de paginación.
 - Manejo de errores mediante middleware global.
 
 ---
@@ -424,6 +480,8 @@ Projects
   ↓
 Tasks
   ↓
+Filtering & Pagination
+  ↓
 Assignment
   ↓
 Comments
@@ -435,7 +493,6 @@ Comments
 
 - Permisos más específicos por rol.
 - Autoasignación de tareas para miembros.
-- Filtros y paginación.
 - Tests unitarios.
 - Tests de integración.
 - Deploy en la nube.

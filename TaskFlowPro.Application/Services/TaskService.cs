@@ -3,6 +3,7 @@ using TaskFlowPro.Application.Exceptions;
 using TaskFlowPro.Application.Interfaces;
 using TaskFlowPro.Domain.Entities;
 using TaskFlowPro.Domain.Enums;
+using TaskFlowPro.Application.DTOs.Common;
 
 namespace TaskFlowPro.Application.Services;
 
@@ -68,9 +69,10 @@ public class TaskService : ITaskService
         return ToResponse(task);
     }
 
-    public async Task<List<TaskResponse>> GetByProjectIdAsync(
-        Guid currentUserId,
-        Guid projectId)
+    public async Task<PagedResponse<TaskResponse>> GetByProjectIdAsync(
+    Guid currentUserId,
+    Guid projectId,
+    TaskQueryParameters query)
     {
         var project = await _projectRepository.GetByIdAsync(projectId);
 
@@ -87,11 +89,40 @@ public class TaskService : ITaskService
         if (!isMember)
             throw new ForbiddenException("No tenés permiso para ver tareas de este proyecto.");
 
-        var tasks = await _taskRepository.GetByProjectIdAsync(projectId);
+        if (query.PageNumber < 1)
+            throw new BadRequestException("El número de página debe ser mayor o igual a 1.");
 
-        return tasks
-            .Select(ToResponse)
-            .ToList();
+        if (query.PageSize < 1)
+            throw new BadRequestException("El tamaño de página debe ser mayor o igual a 1.");
+
+        if (query.PageSize > 100)
+            throw new BadRequestException("El tamaño de página no puede superar 100 elementos.");
+
+        if (query.Status.HasValue && !Enum.IsDefined(typeof(TaskItemStatus), query.Status.Value))
+            throw new BadRequestException("Estado de tarea inválido.");
+
+        if (query.Priority.HasValue && !Enum.IsDefined(typeof(TaskPriority), query.Priority.Value))
+            throw new BadRequestException("Prioridad de tarea inválida.");
+
+        var pagedResult = await _taskRepository.GetByProjectIdPagedAsync(
+            projectId,
+            query
+        );
+
+        var totalPages = (int)Math.Ceiling(
+            pagedResult.TotalItems / (double)query.PageSize
+        );
+
+        return new PagedResponse<TaskResponse>
+        {
+            Items = pagedResult.Items
+                .Select(ToResponse)
+                .ToList(),
+            PageNumber = query.PageNumber,
+            PageSize = query.PageSize,
+            TotalItems = pagedResult.TotalItems,
+            TotalPages = totalPages
+        };
     }
 
     public async Task<TaskResponse> GetByIdAsync(

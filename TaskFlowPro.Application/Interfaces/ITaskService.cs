@@ -1,3 +1,4 @@
+using TaskFlowPro.Application.DTOs.Common;
 using TaskFlowPro.Application.DTOs.Tasks;
 
 namespace TaskFlowPro.Application.Interfaces;
@@ -10,9 +11,10 @@ public interface ITaskService
         CreateTaskRequest request
     );
 
-    Task<List<TaskResponse>> GetByProjectIdAsync(
+    Task<PagedResponse<TaskResponse>> GetByProjectIdAsync(
         Guid currentUserId,
-        Guid projectId
+        Guid projectId,
+        TaskQueryParameters query
     );
 
     Task<TaskResponse> GetByIdAsync(

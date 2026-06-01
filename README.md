@@ -4,7 +4,7 @@ TaskFlow Pro es una API REST desarrollada con ASP.NET Core para la gestión cola
 
 El proyecto permite registrar usuarios, iniciar sesión con JWT, crear espacios de trabajo, administrar proyectos, gestionar miembros, crear tareas, asignarlas a usuarios, modificar su estado y prioridad, realizar bajas lógicas, agregar comentarios, y consultar tareas mediante filtros, búsqueda y paginación.
 
-Este proyecto forma parte de mi portfolio como desarrollador backend junior, aplicando buenas prácticas de arquitectura, autenticación, autorización, persistencia de datos, manejo global de errores, documentación de API y consultas paginadas.
+Este proyecto forma parte de mi portfolio como desarrollador backend junior, aplicando buenas prácticas de arquitectura, autenticación, autorización, persistencia de datos, manejo global de errores, documentación de API, consultas paginadas y testing unitario.
 
 ---
 
@@ -19,6 +19,9 @@ Este proyecto forma parte de mi portfolio como desarrollador backend junior, apl
 - JWT Authentication
 - BCrypt
 - Swagger / OpenAPI
+- xUnit
+- Moq
+- FluentAssertions
 - Clean Architecture moderada
 
 ---
@@ -32,7 +35,8 @@ TaskFlowPro
 ├── TaskFlowPro.Api
 ├── TaskFlowPro.Application
 ├── TaskFlowPro.Domain
-└── TaskFlowPro.Infrastructure
+├── TaskFlowPro.Infrastructure
+└── TaskFlowPro.Tests
 ```
 
 ### TaskFlowPro.Api
@@ -71,6 +75,15 @@ Contiene detalles técnicos:
 - Repositories
 - Generación de JWT
 - Acceso a PostgreSQL
+
+### TaskFlowPro.Tests
+
+Contiene pruebas unitarias del proyecto:
+
+- Tests con xUnit
+- Mocks con Moq
+- Aserciones con FluentAssertions
+- Pruebas sobre lógica de aplicación
 
 ---
 
@@ -439,6 +452,42 @@ http://localhost:5052/swagger
 
 ---
 
+## Testing
+
+El proyecto incluye pruebas unitarias para validar lógica de aplicación sin depender de Swagger ni de la base de datos.
+
+Tecnologías utilizadas para testing:
+
+- xUnit
+- Moq
+- FluentAssertions
+
+Ejecutar tests:
+
+```powershell
+dotnet test
+```
+
+Actualmente se incluyen pruebas unitarias para `TaskService`, cubriendo casos como:
+
+- Crear una tarea correctamente.
+- Lanzar `NotFoundException` cuando el proyecto no existe.
+- Lanzar `ForbiddenException` cuando el usuario no pertenece al workspace.
+- Lanzar `BadRequestException` cuando el título de la tarea está vacío.
+- Devolver tareas paginadas correctamente.
+
+Resultado esperado:
+
+```text
+Correctas!
+Con error: 0
+Superado: 5
+Omitido: 0
+Total: 5
+```
+
+---
+
 ## Pruebas realizadas
 
 Se probaron los flujos principales desde Swagger:
@@ -460,6 +509,7 @@ Se probaron los flujos principales desde Swagger:
 - Búsqueda de tareas por texto.
 - Validación de errores de paginación.
 - Manejo de errores mediante middleware global.
+- Tests unitarios de lógica de aplicación.
 
 ---
 
@@ -485,6 +535,8 @@ Filtering & Pagination
 Assignment
   ↓
 Comments
+  ↓
+Unit Testing
 ```
 
 ---
@@ -493,7 +545,6 @@ Comments
 
 - Permisos más específicos por rol.
 - Autoasignación de tareas para miembros.
-- Tests unitarios.
 - Tests de integración.
 - Deploy en la nube.
 - Frontend web.

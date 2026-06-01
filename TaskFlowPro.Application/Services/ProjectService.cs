@@ -10,13 +10,16 @@ public class ProjectService : IProjectService
 {
     private readonly IProjectRepository _projectRepository;
     private readonly IWorkspaceRepository _workspaceRepository;
+    private readonly IWorkspaceAuthorizationService _workspaceAuthorizationService;
 
     public ProjectService(
         IProjectRepository projectRepository,
-        IWorkspaceRepository workspaceRepository)
+        IWorkspaceRepository workspaceRepository,
+        IWorkspaceAuthorizationService workspaceAuthorizationService)
     {
         _projectRepository = projectRepository;
         _workspaceRepository = workspaceRepository;
+        _workspaceAuthorizationService = workspaceAuthorizationService;
     }
 
     public async Task<ProjectResponse> CreateAsync(
@@ -29,12 +32,10 @@ public class ProjectService : IProjectService
         if (workspace is null || !workspace.IsActive)
             throw new NotFoundException("Workspace no encontrado.");
 
-        var isMember = workspace.Members.Any(member =>
-            member.UserId == currentUserId &&
-            member.IsActive);
-
-        if (!isMember)
-            throw new ForbiddenException("No tenés permiso para crear proyectos en este workspace.");
+        _workspaceAuthorizationService.EnsureOwnerOrAdmin(
+            workspace,
+            currentUserId
+        );
 
         if (string.IsNullOrWhiteSpace(request.Name))
             throw new BadRequestException("El nombre del proyecto es obligatorio.");
@@ -64,12 +65,10 @@ public class ProjectService : IProjectService
         if (workspace is null || !workspace.IsActive)
             throw new NotFoundException("Workspace no encontrado.");
 
-        var isMember = workspace.Members.Any(member =>
-            member.UserId == currentUserId &&
-            member.IsActive);
-
-        if (!isMember)
-            throw new ForbiddenException("No tenés permiso para ver proyectos de este workspace.");
+        _workspaceAuthorizationService.EnsureMember(
+            workspace,
+            currentUserId
+        );
 
         var projects = await _projectRepository.GetByWorkspaceIdAsync(workspaceId);
 
@@ -90,12 +89,10 @@ public class ProjectService : IProjectService
         if (project.Workspace is null || !project.Workspace.IsActive)
             throw new NotFoundException("Workspace no encontrado.");
 
-        var isMember = project.Workspace.Members.Any(member =>
-            member.UserId == currentUserId &&
-            member.IsActive);
-
-        if (!isMember)
-            throw new ForbiddenException("No tenés permiso para acceder a este proyecto.");
+        _workspaceAuthorizationService.EnsureMember(
+            project.Workspace,
+            currentUserId
+        );
 
         return ToResponse(project);
     }

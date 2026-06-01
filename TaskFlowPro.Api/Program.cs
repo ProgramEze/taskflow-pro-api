@@ -53,13 +53,29 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+/*
+userId: 50185452-dfe4-4120-9fce-5b172bf78169
+workspaceId: 6b8a1c85-4a22-4a03-a0c4-7a676beb3dff
+projectId: d27fcfc0-3d98-4c46-85e0-e99a020dc6fa
+Tarea 1: 609b1dec-95c8-4e19-b15f-f127b8f3e474
+Tarea 2: 8e060cbe-98f2-4c51-b4da-ab298e7bdeb5
+Tarea 3: 57c34f8d-a42c-4abf-9083-d236ae6c984a
+Tarea 4: 228f351f-b7bd-4c3b-a867-d1b10465558d
+Tarea 5: 98b22202-1970-446a-9132-bfe434572a4a
+Tarea 6: 6d91e966-be5e-4b17-870f-cfa1626acd32
+*/
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
+builder.Services.AddScoped<IWorkspaceAuthorizationService, WorkspaceAuthorizationService>();
+
 builder.Services.AddScoped<IWorkspaceRepository, WorkspaceRepository>();
 builder.Services.AddScoped<IWorkspaceService, WorkspaceService>();
+
+builder.Services.AddScoped<IWorkspaceMemberRepository, WorkspaceMemberRepository>();
+builder.Services.AddScoped<IWorkspaceMemberService, WorkspaceMemberService>();
 
 builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
@@ -69,9 +85,6 @@ builder.Services.AddScoped<ITaskService, TaskService>();
 
 builder.Services.AddScoped<ICommentRepository, CommentRepository>();
 builder.Services.AddScoped<ICommentService, CommentService>();
-
-builder.Services.AddScoped<IWorkspaceMemberRepository, WorkspaceMemberRepository>();
-builder.Services.AddScoped<IWorkspaceMemberService, WorkspaceMemberService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("JWT Key no configurada.");

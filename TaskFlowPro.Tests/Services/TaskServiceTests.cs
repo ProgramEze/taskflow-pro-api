@@ -14,16 +14,19 @@ public class TaskServiceTests
 {
     private readonly Mock<ITaskRepository> _taskRepositoryMock;
     private readonly Mock<IProjectRepository> _projectRepositoryMock;
+    private readonly Mock<IWorkspaceAuthorizationService> _workspaceAuthorizationServiceMock;
     private readonly TaskService _taskService;
 
     public TaskServiceTests()
     {
         _taskRepositoryMock = new Mock<ITaskRepository>();
         _projectRepositoryMock = new Mock<IProjectRepository>();
+        _workspaceAuthorizationServiceMock = new Mock<IWorkspaceAuthorizationService>();
 
         _taskService = new TaskService(
             _taskRepositoryMock.Object,
-            _projectRepositoryMock.Object
+            _projectRepositoryMock.Object,
+            _workspaceAuthorizationServiceMock.Object
         );
     }
 
@@ -77,6 +80,11 @@ public class TaskServiceTests
 
         _taskRepositoryMock.Verify(
             repository => repository.AddAsync(It.IsAny<TaskItem>()),
+            Times.Once
+        );
+
+        _workspaceAuthorizationServiceMock.Verify(
+            service => service.EnsureMember(project.Workspace, currentUserId),
             Times.Once
         );
     }
@@ -142,6 +150,10 @@ public class TaskServiceTests
             .Setup(repository => repository.GetByIdAsync(projectId))
             .ReturnsAsync(project);
 
+        _workspaceAuthorizationServiceMock
+            .Setup(service => service.EnsureMember(project.Workspace, currentUserId))
+            .Throws(new ForbiddenException("No pertenecés a este workspace."));
+
         // Act
         var act = async () => await _taskService.CreateAsync(
             currentUserId,
@@ -152,7 +164,7 @@ public class TaskServiceTests
         // Assert
         await act.Should()
             .ThrowAsync<ForbiddenException>()
-            .WithMessage("No tenés permiso para crear tareas en este proyecto.");
+            .WithMessage("No pertenecés a este workspace.");
 
         _taskRepositoryMock.Verify(
             repository => repository.AddAsync(It.IsAny<TaskItem>()),
@@ -200,6 +212,11 @@ public class TaskServiceTests
         _taskRepositoryMock.Verify(
             repository => repository.AddAsync(It.IsAny<TaskItem>()),
             Times.Never
+        );
+
+        _workspaceAuthorizationServiceMock.Verify(
+            service => service.EnsureMember(project.Workspace, currentUserId),
+            Times.Once
         );
     }
 
@@ -282,6 +299,11 @@ public class TaskServiceTests
         result.TotalPages.Should().Be(3);
         result.HasPreviousPage.Should().BeFalse();
         result.HasNextPage.Should().BeTrue();
+
+        _workspaceAuthorizationServiceMock.Verify(
+            service => service.EnsureMember(project.Workspace, currentUserId),
+            Times.Once
+        );
     }
 
     private static Project CreateProjectWithMember(

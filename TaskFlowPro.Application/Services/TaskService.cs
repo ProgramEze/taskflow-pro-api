@@ -1,9 +1,9 @@
+using TaskFlowPro.Application.DTOs.Common;
 using TaskFlowPro.Application.DTOs.Tasks;
 using TaskFlowPro.Application.Exceptions;
 using TaskFlowPro.Application.Interfaces;
 using TaskFlowPro.Domain.Entities;
 using TaskFlowPro.Domain.Enums;
-using TaskFlowPro.Application.DTOs.Common;
 
 namespace TaskFlowPro.Application.Services;
 
@@ -11,13 +11,16 @@ public class TaskService : ITaskService
 {
     private readonly ITaskRepository _taskRepository;
     private readonly IProjectRepository _projectRepository;
+    private readonly IWorkspaceAuthorizationService _workspaceAuthorizationService;
 
     public TaskService(
         ITaskRepository taskRepository,
-        IProjectRepository projectRepository)
+        IProjectRepository projectRepository,
+        IWorkspaceAuthorizationService workspaceAuthorizationService)
     {
         _taskRepository = taskRepository;
         _projectRepository = projectRepository;
+        _workspaceAuthorizationService = workspaceAuthorizationService;
     }
 
     public async Task<TaskResponse> CreateAsync(
@@ -36,12 +39,10 @@ public class TaskService : ITaskService
         if (project.Status == ProjectStatus.Archived)
             throw new BadRequestException("No se pueden crear tareas en un proyecto archivado.");
 
-        var isMember = project.Workspace.Members.Any(member =>
-            member.UserId == currentUserId &&
-            member.IsActive);
-
-        if (!isMember)
-            throw new ForbiddenException("No tenés permiso para crear tareas en este proyecto.");
+        _workspaceAuthorizationService.EnsureMember(
+            project.Workspace,
+            currentUserId
+        );
 
         if (string.IsNullOrWhiteSpace(request.Title))
             throw new BadRequestException("El título de la tarea es obligatorio.");
@@ -70,9 +71,9 @@ public class TaskService : ITaskService
     }
 
     public async Task<PagedResponse<TaskResponse>> GetByProjectIdAsync(
-    Guid currentUserId,
-    Guid projectId,
-    TaskQueryParameters query)
+        Guid currentUserId,
+        Guid projectId,
+        TaskQueryParameters query)
     {
         var project = await _projectRepository.GetByIdAsync(projectId);
 
@@ -82,12 +83,10 @@ public class TaskService : ITaskService
         if (project.Workspace is null || !project.Workspace.IsActive)
             throw new NotFoundException("Workspace no encontrado.");
 
-        var isMember = project.Workspace.Members.Any(member =>
-            member.UserId == currentUserId &&
-            member.IsActive);
-
-        if (!isMember)
-            throw new ForbiddenException("No tenés permiso para ver tareas de este proyecto.");
+        _workspaceAuthorizationService.EnsureMember(
+            project.Workspace,
+            currentUserId
+        );
 
         if (query.PageNumber < 1)
             throw new BadRequestException("El número de página debe ser mayor o igual a 1.");
@@ -137,12 +136,10 @@ public class TaskService : ITaskService
         if (task.Project.Workspace is null || !task.Project.Workspace.IsActive)
             throw new NotFoundException("Workspace no encontrado.");
 
-        var isMember = task.Project.Workspace.Members.Any(member =>
-            member.UserId == currentUserId &&
-            member.IsActive);
-
-        if (!isMember)
-            throw new ForbiddenException("No tenés permiso para acceder a esta tarea.");
+        _workspaceAuthorizationService.EnsureMember(
+            task.Project.Workspace,
+            currentUserId
+        );
 
         return ToResponse(task);
     }
@@ -163,12 +160,10 @@ public class TaskService : ITaskService
         if (task.Project.Status == ProjectStatus.Archived)
             throw new BadRequestException("No se puede modificar una tarea de un proyecto archivado.");
 
-        var isMember = task.Project.Workspace.Members.Any(member =>
-            member.UserId == currentUserId &&
-            member.IsActive);
-
-        if (!isMember)
-            throw new ForbiddenException("No tenés permiso para modificar esta tarea.");
+        _workspaceAuthorizationService.EnsureMember(
+            task.Project.Workspace,
+            currentUserId
+        );
 
         if (!Enum.IsDefined(typeof(TaskItemStatus), request.Status))
             throw new BadRequestException("Estado de tarea inválido.");
@@ -196,12 +191,10 @@ public class TaskService : ITaskService
         if (task.Project.Status == ProjectStatus.Archived)
             throw new BadRequestException("No se puede modificar una tarea de un proyecto archivado.");
 
-        var isMember = task.Project.Workspace.Members.Any(member =>
-            member.UserId == currentUserId &&
-            member.IsActive);
-
-        if (!isMember)
-            throw new ForbiddenException("No tenés permiso para modificar esta tarea.");
+        _workspaceAuthorizationService.EnsureMember(
+            task.Project.Workspace,
+            currentUserId
+        );
 
         if (!Enum.IsDefined(typeof(TaskPriority), request.Priority))
             throw new BadRequestException("Prioridad de tarea inválida.");
@@ -229,12 +222,10 @@ public class TaskService : ITaskService
         if (task.Project.Status == ProjectStatus.Archived)
             throw new BadRequestException("No se puede modificar una tarea de un proyecto archivado.");
 
-        var isMember = task.Project.Workspace.Members.Any(member =>
-            member.UserId == currentUserId &&
-            member.IsActive);
-
-        if (!isMember)
-            throw new ForbiddenException("No tenés permiso para modificar esta tarea.");
+        _workspaceAuthorizationService.EnsureMember(
+            task.Project.Workspace,
+            currentUserId
+        );
 
         if (string.IsNullOrWhiteSpace(request.Title))
             throw new BadRequestException("El título de la tarea es obligatorio.");
@@ -261,12 +252,10 @@ public class TaskService : ITaskService
         if (task.Project.Status == ProjectStatus.Archived)
             throw new BadRequestException("No se puede eliminar una tarea de un proyecto archivado.");
 
-        var isMember = task.Project.Workspace.Members.Any(member =>
-            member.UserId == currentUserId &&
-            member.IsActive);
-
-        if (!isMember)
-            throw new ForbiddenException("No tenés permiso para eliminar esta tarea.");
+        _workspaceAuthorizationService.EnsureMember(
+            task.Project.Workspace,
+            currentUserId
+        );
 
         task.IsActive = false;
 
@@ -274,9 +263,9 @@ public class TaskService : ITaskService
     }
 
     public async Task<TaskResponse> AssignAsync(
-    Guid currentUserId,
-    Guid taskId,
-    AssignTaskRequest request)
+        Guid currentUserId,
+        Guid taskId,
+        AssignTaskRequest request)
     {
         var task = await _taskRepository.GetByIdAsync(taskId);
 
@@ -289,15 +278,10 @@ public class TaskService : ITaskService
         if (task.Project.Status == ProjectStatus.Archived)
             throw new BadRequestException("No se puede asignar una tarea de un proyecto archivado.");
 
-        var currentMember = task.Project.Workspace.Members.FirstOrDefault(member =>
-            member.UserId == currentUserId &&
-            member.IsActive);
-
-        if (currentMember is null)
-            throw new ForbiddenException("No tenés permiso para asignar esta tarea.");
-
-        if (currentMember.Role is not WorkspaceRole.Owner and not WorkspaceRole.Admin)
-            throw new ForbiddenException("Solo Owner o Admin pueden asignar tareas.");
+        _workspaceAuthorizationService.EnsureOwnerOrAdmin(
+            task.Project.Workspace,
+            currentUserId
+        );
 
         var assignedMember = task.Project.Workspace.Members.FirstOrDefault(member =>
             member.UserId == request.AssignedUserId &&

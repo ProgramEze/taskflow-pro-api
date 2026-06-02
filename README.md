@@ -4,7 +4,7 @@ TaskFlow Pro es una API REST desarrollada con ASP.NET Core para la gestión cola
 
 El proyecto permite registrar usuarios, iniciar sesión con JWT, crear espacios de trabajo, administrar proyectos, gestionar miembros, crear tareas, asignarlas a usuarios, modificar su estado y prioridad, realizar bajas lógicas, agregar comentarios, y consultar tareas mediante filtros, búsqueda y paginación.
 
-Este proyecto forma parte de mi portfolio como desarrollador backend junior, aplicando buenas prácticas de arquitectura, autenticación, autorización, persistencia de datos, manejo global de errores, documentación de API, consultas paginadas y testing unitario.
+Este proyecto forma parte de mi portfolio como desarrollador backend junior, aplicando buenas prácticas de arquitectura, autenticación, autorización, persistencia de datos, manejo global de errores, documentación de API, consultas paginadas, testing unitario e integración básica.
 
 ---
 
@@ -22,6 +22,7 @@ Este proyecto forma parte de mi portfolio como desarrollador backend junior, apl
 - xUnit
 - Moq
 - FluentAssertions
+- Microsoft.AspNetCore.Mvc.Testing
 - Clean Architecture moderada
 
 ---
@@ -36,7 +37,8 @@ TaskFlowPro
 ├── TaskFlowPro.Application
 ├── TaskFlowPro.Domain
 ├── TaskFlowPro.Infrastructure
-└── TaskFlowPro.Tests
+├── TaskFlowPro.Tests
+└── TaskFlowPro.IntegrationTests
 ```
 
 ### TaskFlowPro.Api
@@ -48,6 +50,7 @@ Contiene la capa de presentación de la API:
 - Configuración de JWT
 - Middleware global de errores
 - Extensiones para obtener el usuario autenticado
+- Configuración de dependencias
 
 ### TaskFlowPro.Application
 
@@ -85,6 +88,15 @@ Contiene pruebas unitarias del proyecto:
 - Mocks con Moq
 - Aserciones con FluentAssertions
 - Pruebas sobre lógica de aplicación
+
+### TaskFlowPro.IntegrationTests
+
+Contiene pruebas de integración iniciales:
+
+- Tests con xUnit
+- Uso de `WebApplicationFactory`
+- Validación de arranque de la API
+- Prueba de disponibilidad de Swagger en entorno de desarrollo
 
 ---
 
@@ -501,23 +513,27 @@ http://localhost:5052/swagger
 
 ## Testing
 
-El proyecto incluye pruebas unitarias para validar lógica de aplicación sin depender de Swagger ni de la base de datos.
+El proyecto incluye pruebas unitarias y una prueba inicial de integración para validar lógica de aplicación y arranque de API.
 
 Tecnologías utilizadas para testing:
 
 - xUnit
 - Moq
 - FluentAssertions
+- Microsoft.AspNetCore.Mvc.Testing
+- WebApplicationFactory
 
-Ejecutar tests:
+Ejecutar todos los tests:
 
 ```powershell
 dotnet test
 ```
 
+### Unit tests
+
 Actualmente se incluyen pruebas unitarias para:
 
-### TaskService
+#### TaskService
 
 - Crear una tarea correctamente.
 - Lanzar `NotFoundException` cuando el proyecto no existe.
@@ -525,7 +541,7 @@ Actualmente se incluyen pruebas unitarias para:
 - Lanzar `BadRequestException` cuando el título de la tarea está vacío.
 - Devolver tareas paginadas correctamente.
 
-### WorkspaceMemberService
+#### WorkspaceMemberService
 
 - Agregar un miembro cuando el usuario actual es Owner.
 - Lanzar `ForbiddenException` cuando un Member intenta agregar miembros.
@@ -536,7 +552,7 @@ Actualmente se incluyen pruebas unitarias para:
 - Quitar un miembro cuando el usuario actual es Owner.
 - Lanzar `BadRequestException` al intentar quitar al Owner.
 
-### CommentService
+#### CommentService
 
 - Crear un comentario cuando el usuario es miembro del workspace.
 - Lanzar `NotFoundException` cuando la tarea no existe.
@@ -547,14 +563,20 @@ Actualmente se incluyen pruebas unitarias para:
 - Eliminar un comentario cuando el usuario es el autor.
 - Lanzar `ForbiddenException` cuando un usuario intenta eliminar un comentario ajeno.
 
+### Integration tests
+
+Actualmente se incluye una prueba de integración inicial:
+
+- Levantar la API en memoria con `WebApplicationFactory`.
+- Ejecutar la aplicación en entorno `Development`.
+- Verificar que Swagger responda correctamente en `/swagger/v1/swagger.json`.
+
 Resultado esperado:
 
 ```text
-Correctas!
-Con error: 0
-Superado: 21
-Omitido: 0
-Total: 21
+TaskFlowPro.Tests              -> 21 tests correctos
+TaskFlowPro.IntegrationTests   -> 1 test correcto
+Total general                  -> 22 tests correctos
 ```
 
 ---
@@ -582,6 +604,7 @@ Se probaron los flujos principales desde Swagger:
 - Autorización centralizada en Projects, Tasks, Members y Comments.
 - Manejo de errores mediante middleware global.
 - Tests unitarios de lógica de aplicación.
+- Test inicial de integración para validar arranque de API y disponibilidad de Swagger.
 
 ---
 
@@ -611,6 +634,8 @@ Comments
 Centralized Authorization
   ↓
 Unit Testing
+  ↓
+Integration Testing
 ```
 
 ---
@@ -618,6 +643,7 @@ Unit Testing
 ## Próximas mejoras
 
 - Autoasignación de tareas para miembros.
-- Tests de integración.
+- Tests de integración con endpoints reales de Auth.
+- Base de datos de pruebas separada o en memoria para integration tests.
 - Deploy en la nube.
 - Frontend web.

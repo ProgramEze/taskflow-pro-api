@@ -58,6 +58,7 @@ Contiene la lógica de aplicación:
 - Services
 - Excepciones personalizadas
 - Modelos de respuesta paginada
+- Servicio centralizado de autorización por workspace
 
 ### TaskFlowPro.Domain
 
@@ -133,6 +134,7 @@ GET /api/Workspaces/{workspaceId}
 - Solo Owner/Admin pueden agregar o quitar miembros.
 - Solo Owner puede cambiar roles.
 - No se puede quitar ni modificar el rol del Owner.
+- Admin no puede quitar a otro Admin.
 
 Endpoints principales:
 
@@ -151,6 +153,9 @@ DELETE /api/workspaces/{workspaceId}/members/{memberId}
 - Listar proyectos por workspace.
 - Ver detalle de proyecto.
 - Validación de pertenencia al workspace.
+- Autorización centralizada por rol.
+- Solo Owner/Admin pueden crear proyectos.
+- Los miembros activos pueden consultar proyectos del workspace.
 
 Endpoints principales:
 
@@ -177,6 +182,8 @@ GET /api/projects/{projectId}
 - Filtrar tareas por usuario asignado.
 - Buscar tareas por texto en título o descripción.
 - Paginar resultados.
+- Autorización centralizada por workspace.
+- Solo Owner/Admin pueden asignar tareas.
 
 Endpoints principales:
 
@@ -244,6 +251,10 @@ Ejemplo de respuesta paginada:
 - Listar comentarios por tarea.
 - Editar comentarios propios.
 - Baja lógica de comentarios.
+- Cualquier miembro activo del workspace puede ver y crear comentarios.
+- Solo el autor del comentario puede editarlo.
+- Solo el autor del comentario puede eliminarlo.
+- Autorización centralizada por workspace.
 
 Endpoints principales:
 
@@ -253,6 +264,36 @@ GET /api/tasks/{taskId}/comments
 PUT /api/comments/{commentId}
 DELETE /api/comments/{commentId}
 ```
+
+---
+
+## Autorización por workspace
+
+El proyecto incluye un servicio centralizado de autorización:
+
+```text
+WorkspaceAuthorizationService
+```
+
+Este servicio permite validar permisos de forma reutilizable en los servicios de aplicación.
+
+Métodos principales:
+
+```text
+GetCurrentMemberOrThrow
+EnsureMember
+EnsureOwner
+EnsureOwnerOrAdmin
+```
+
+Actualmente se utiliza en:
+
+- `ProjectService`
+- `TaskService`
+- `WorkspaceMemberService`
+- `CommentService`
+
+Esto evita repetir lógica de permisos en cada servicio y facilita mantener reglas de negocio más claras.
 
 ---
 
@@ -301,8 +342,14 @@ Reglas principales implementadas:
 - Solo Owner puede cambiar roles.
 - No se puede quitar al Owner del workspace.
 - No se puede modificar el rol del Owner desde el endpoint de cambio de rol.
+- Admin no puede quitar a otro Admin.
+- Solo Owner/Admin pueden crear proyectos.
+- Los miembros activos pueden ver proyectos y tareas del workspace.
+- Los miembros activos pueden crear tareas.
 - Una tarea solo puede asignarse a un usuario que sea miembro activo del workspace.
 - Solo Owner/Admin pueden asignar tareas.
+- Los miembros activos pueden crear y listar comentarios.
+- Solo el autor puede editar o eliminar sus propios comentarios.
 
 ---
 
@@ -489,14 +536,25 @@ Actualmente se incluyen pruebas unitarias para:
 - Quitar un miembro cuando el usuario actual es Owner.
 - Lanzar `BadRequestException` al intentar quitar al Owner.
 
+### CommentService
+
+- Crear un comentario cuando el usuario es miembro del workspace.
+- Lanzar `NotFoundException` cuando la tarea no existe.
+- Lanzar `BadRequestException` cuando el contenido del comentario está vacío.
+- Listar comentarios activos de una tarea.
+- Editar un comentario cuando el usuario es el autor.
+- Lanzar `ForbiddenException` cuando un usuario intenta editar un comentario ajeno.
+- Eliminar un comentario cuando el usuario es el autor.
+- Lanzar `ForbiddenException` cuando un usuario intenta eliminar un comentario ajeno.
+
 Resultado esperado:
 
 ```text
 Correctas!
 Con error: 0
-Superado: 13
+Superado: 21
 Omitido: 0
-Total: 13
+Total: 21
 ```
 
 ---
@@ -521,6 +579,7 @@ Se probaron los flujos principales desde Swagger:
 - Filtros de tareas por estado, prioridad y usuario asignado.
 - Búsqueda de tareas por texto.
 - Validación de errores de paginación.
+- Autorización centralizada en Projects, Tasks, Members y Comments.
 - Manejo de errores mediante middleware global.
 - Tests unitarios de lógica de aplicación.
 
@@ -549,6 +608,8 @@ Assignment
   ↓
 Comments
   ↓
+Centralized Authorization
+  ↓
 Unit Testing
 ```
 
@@ -556,7 +617,6 @@ Unit Testing
 
 ## Próximas mejoras
 
-- Permisos más específicos por rol.
 - Autoasignación de tareas para miembros.
 - Tests de integración.
 - Deploy en la nube.

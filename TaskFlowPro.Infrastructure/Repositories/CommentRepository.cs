@@ -29,9 +29,7 @@ public class CommentRepository : ICommentRepository
     public async Task<List<Comment>> GetByTaskIdAsync(Guid taskId)
     {
         return await _context.Comments
-            .Where(comment =>
-                comment.TaskItemId == taskId &&
-                comment.IsActive)
+            .Where(comment => comment.TaskItemId == taskId && comment.IsActive)
             .OrderBy(comment => comment.CreatedAt)
             .ToListAsync();
     }

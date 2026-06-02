@@ -9,13 +9,16 @@ public class CommentService : ICommentService
 {
     private readonly ICommentRepository _commentRepository;
     private readonly ITaskRepository _taskRepository;
+    private readonly IWorkspaceAuthorizationService _workspaceAuthorizationService;
 
     public CommentService(
         ICommentRepository commentRepository,
-        ITaskRepository taskRepository)
+        ITaskRepository taskRepository,
+        IWorkspaceAuthorizationService workspaceAuthorizationService)
     {
         _commentRepository = commentRepository;
         _taskRepository = taskRepository;
+        _workspaceAuthorizationService = workspaceAuthorizationService;
     }
 
     public async Task<CommentResponse> CreateAsync(
@@ -31,12 +34,10 @@ public class CommentService : ICommentService
         if (task.Project.Workspace is null || !task.Project.Workspace.IsActive)
             throw new NotFoundException("Workspace no encontrado.");
 
-        var isMember = task.Project.Workspace.Members.Any(member =>
-            member.UserId == currentUserId &&
-            member.IsActive);
-
-        if (!isMember)
-            throw new ForbiddenException("No tenés permiso para comentar esta tarea.");
+        _workspaceAuthorizationService.EnsureMember(
+            task.Project.Workspace,
+            currentUserId
+        );
 
         if (string.IsNullOrWhiteSpace(request.Content))
             throw new BadRequestException("El contenido del comentario es obligatorio.");
@@ -69,16 +70,15 @@ public class CommentService : ICommentService
         if (task.Project.Workspace is null || !task.Project.Workspace.IsActive)
             throw new NotFoundException("Workspace no encontrado.");
 
-        var isMember = task.Project.Workspace.Members.Any(member =>
-            member.UserId == currentUserId &&
-            member.IsActive);
-
-        if (!isMember)
-            throw new ForbiddenException("No tenés permiso para ver comentarios de esta tarea.");
+        _workspaceAuthorizationService.EnsureMember(
+            task.Project.Workspace,
+            currentUserId
+        );
 
         var comments = await _commentRepository.GetByTaskIdAsync(taskId);
 
         return comments
+            .Where(comment => comment.IsActive)
             .Select(ToResponse)
             .ToList();
     }
@@ -93,8 +93,19 @@ public class CommentService : ICommentService
         if (comment is null || !comment.IsActive)
             throw new NotFoundException("Comentario no encontrado.");
 
+        if (comment.TaskItem is null || !comment.TaskItem.IsActive)
+            throw new NotFoundException("Tarea no encontrada.");
+
+        if (comment.TaskItem.Project.Workspace is null || !comment.TaskItem.Project.Workspace.IsActive)
+            throw new NotFoundException("Workspace no encontrado.");
+
+        _workspaceAuthorizationService.EnsureMember(
+            comment.TaskItem.Project.Workspace,
+            currentUserId
+        );
+
         if (comment.UserId != currentUserId)
-            throw new ForbiddenException("Solo el autor puede editar este comentario.");
+            throw new ForbiddenException("Solo podés editar tus propios comentarios.");
 
         if (string.IsNullOrWhiteSpace(request.Content))
             throw new BadRequestException("El contenido del comentario es obligatorio.");
@@ -107,15 +118,28 @@ public class CommentService : ICommentService
         return ToResponse(comment);
     }
 
-    public async Task DeleteAsync(Guid currentUserId, Guid commentId)
+    public async Task DeleteAsync(
+        Guid currentUserId,
+        Guid commentId)
     {
         var comment = await _commentRepository.GetByIdAsync(commentId);
 
         if (comment is null || !comment.IsActive)
             throw new NotFoundException("Comentario no encontrado.");
 
+        if (comment.TaskItem is null || !comment.TaskItem.IsActive)
+            throw new NotFoundException("Tarea no encontrada.");
+
+        if (comment.TaskItem.Project.Workspace is null || !comment.TaskItem.Project.Workspace.IsActive)
+            throw new NotFoundException("Workspace no encontrado.");
+
+        _workspaceAuthorizationService.EnsureMember(
+            comment.TaskItem.Project.Workspace,
+            currentUserId
+        );
+
         if (comment.UserId != currentUserId)
-            throw new ForbiddenException("Solo el autor puede eliminar este comentario.");
+            throw new ForbiddenException("Solo podés eliminar tus propios comentarios.");
 
         comment.IsActive = false;
         comment.UpdatedAt = DateTime.UtcNow;

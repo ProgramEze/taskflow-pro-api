@@ -90,6 +90,19 @@ Tarea 6: 8be83290-d5aa-44cb-bcdf-f0c2b5291386
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjI5NTQ5YTU0LWU1N2YtNDJmYy1hMGExLTFhN2VhMjUxYjcwNSIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL2VtYWlsYWRkcmVzcyI6ImFuYUB0ZXN0LmNvbSIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWUiOiJBbmEgUGVyZXoiLCJleHAiOjE3ODAzNDkyNjQsImlzcyI6IlRhc2tGbG93UHJvIiwiYXVkIjoiVGFza0Zsb3dQcm9Vc2VycyJ9.SS4nqPqUxVXSSVm0oBqfBkayqGw-LD-8rar1bHp1cG0"
 }
 
+{
+  "email": "juan@test.com",
+  "password": "123456"
+}
+
+{
+  "userId": "f1c2a09a-857d-42e7-ac08-7dc9f254e1ce",
+  "firstName": "Juan",
+  "lastName": "Menendez",
+  "email": "juan@test.com",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6ImYxYzJhMDlhLTg1N2QtNDJlNy1hYzA4LTdkYzlmMjU0ZTFjZSIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL2VtYWlsYWRkcmVzcyI6Imp1YW5AdGVzdC5jb20iLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiSnVhbiBNZW5lbmRleiIsImV4cCI6MTc4MDM2NzM2NywiaXNzIjoiVGFza0Zsb3dQcm8iLCJhdWQiOiJUYXNrRmxvd1Byb1VzZXJzIn0.pCuKR98IqbYa9WUVG1Jr4aTtaQCDgYMovl9fFK166wI"
+}
+
 */
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();

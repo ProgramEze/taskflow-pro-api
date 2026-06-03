@@ -19,8 +19,8 @@ public class TaskAssignIntegrationTests : IClassFixture<CustomWebApplicationFact
     // Helpers privados
     // ─────────────────────────────────────────────────────────────────────────
 
-    // Registra un usuario y devuelve (client autenticado, userId).
-    private async Task<(HttpClient client, Guid userId)> CreateAuthenticatedClientAsync()
+    // Registra un usuario y devuelve (client autenticado, userId, email).
+    private async Task<(HttpClient client, Guid userId, string email)> CreateAuthenticatedClientAsync()
     {
         var client = _factory.CreateClient();
 
@@ -42,14 +42,14 @@ public class TaskAssignIntegrationTests : IClassFixture<CustomWebApplicationFact
 
         IntegrationTestHelper.SetBearerToken(client, token);
 
-        return (client, userId);
+        return (client, userId, email);
     }
 
     // Registra un owner, crea workspace + proyecto y devuelve todo lo necesario.
     private async Task<(HttpClient ownerClient, Guid ownerId, Guid workspaceId, Guid projectId)>
         CreateOwnerWithProjectAsync()
     {
-        var (ownerClient, ownerId) = await CreateAuthenticatedClientAsync();
+        var (ownerClient, ownerId, _) = await CreateAuthenticatedClientAsync();
 
         var workspaceResponse = await ownerClient.PostAsJsonAsync("/api/Workspaces", new
         {
@@ -89,17 +89,17 @@ public class TaskAssignIntegrationTests : IClassFixture<CustomWebApplicationFact
         return json.RootElement.GetProperty("id").GetGuid();
     }
 
-    // Registra un segundo usuario y lo agrega al workspace como miembro.
+    // Registra un segundo usuario y lo agrega al workspace como miembro por email.
     // Devuelve (client del miembro, userId del miembro).
     private async Task<(HttpClient memberClient, Guid memberId)>
         AddMemberToWorkspaceAsync(HttpClient ownerClient, Guid workspaceId)
     {
-        var (memberClient, memberId) = await CreateAuthenticatedClientAsync();
+        var (memberClient, memberId, memberEmail) = await CreateAuthenticatedClientAsync();
 
         var addResponse = await ownerClient.PostAsJsonAsync(
             $"/api/workspaces/{workspaceId}/members", new
             {
-                userId = memberId
+                email = memberEmail
             });
         addResponse.EnsureSuccessStatusCode();
 
@@ -202,7 +202,7 @@ public class TaskAssignIntegrationTests : IClassFixture<CustomWebApplicationFact
         var taskId = await CreateTaskAndGetIdAsync(ownerClient, projectId);
 
         // Usuario autenticado pero que no pertenece al workspace
-        var (outsiderClient, outsiderId) = await CreateAuthenticatedClientAsync();
+        var (outsiderClient, outsiderId, _) = await CreateAuthenticatedClientAsync();
 
         var response = await outsiderClient.PatchAsJsonAsync(
             $"/api/tasks/{taskId}/assign",
@@ -254,7 +254,7 @@ public class TaskAssignIntegrationTests : IClassFixture<CustomWebApplicationFact
         var taskId = await CreateTaskAndGetIdAsync(ownerClient, projectId);
 
         // Owner intenta asignar a un usuario que no está en el workspace
-        var (_, outsiderId) = await CreateAuthenticatedClientAsync();
+        var (_, outsiderId, _) = await CreateAuthenticatedClientAsync();
 
         var response = await ownerClient.PatchAsJsonAsync(
             $"/api/tasks/{taskId}/assign",

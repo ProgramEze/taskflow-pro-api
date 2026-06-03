@@ -98,7 +98,7 @@ public class TaskIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         {
             title = "Tarea con fecha",
             priority = 0,  // Low
-            dueDate = DateTime.UtcNow.AddDays(7)
+            dueDate = DateTime.UtcNow.AddDays(7).ToString("o")  // ISO 8601
         };
 
         var response = await client.PostAsJsonAsync(

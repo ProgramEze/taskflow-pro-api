@@ -278,10 +278,21 @@ public class TaskService : ITaskService
         if (task.Project.Status == ProjectStatus.Archived)
             throw new BadRequestException("No se puede asignar una tarea de un proyecto archivado.");
 
-        _workspaceAuthorizationService.EnsureOwnerOrAdmin(
-            task.Project.Workspace,
-            currentUserId
-        );
+        // Autoasignación: cualquier miembro puede asignarse a sí mismo.
+        // Asignación a otro: solo Owner o Admin.
+        if (request.AssignedUserId == currentUserId)
+            _workspaceAuthorizationService.EnsureMember(
+                task.Project.Workspace,
+                currentUserId
+            );
+        else
+            _workspaceAuthorizationService.EnsureOwnerOrAdmin(
+                task.Project.Workspace,
+                currentUserId
+            );
+
+        if (task.AssignedUserId.HasValue)
+            throw new ConflictException("Esta tarea ya tiene un usuario asignado.");
 
         var assignedMember = task.Project.Workspace.Members.FirstOrDefault(member =>
             member.UserId == request.AssignedUserId &&

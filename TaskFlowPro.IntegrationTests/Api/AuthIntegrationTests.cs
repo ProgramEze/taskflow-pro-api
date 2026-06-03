@@ -6,16 +6,18 @@ namespace TaskFlowPro.IntegrationTests.Api;
 
 public class AuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
 {
-    private readonly HttpClient _client;
+    private readonly CustomWebApplicationFactory _factory;
 
     public AuthIntegrationTests(CustomWebApplicationFactory factory)
     {
-        _client = factory.CreateClient();
+        _factory = factory;
     }
 
     [Fact]
-    public async Task Register_WithValidData_ReturnsOk()
+    public async Task Register_WithValidData_ReturnsCreated()
     {
+        var client = _factory.CreateClient();
+
         var request = new
         {
             firstName = "Test",
@@ -24,7 +26,7 @@ public class AuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
             password = "Test1234!"
         };
 
-        var response = await _client.PostAsJsonAsync("/api/Auth/register", request);
+        var response = await client.PostAsJsonAsync("/api/Auth/register", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
     }
@@ -32,9 +34,10 @@ public class AuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task Register_WithDuplicateEmail_ReturnsConflict()
     {
+        var client = _factory.CreateClient();
         var email = $"duplicate_{Guid.NewGuid():N}@example.com";
 
-        await _client.PostAsJsonAsync("/api/Auth/register", new
+        await client.PostAsJsonAsync("/api/Auth/register", new
         {
             firstName = "Test",
             lastName = "User",
@@ -42,7 +45,7 @@ public class AuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
             password = "Test1234!"
         });
 
-        var response = await _client.PostAsJsonAsync("/api/Auth/register", new
+        var response = await client.PostAsJsonAsync("/api/Auth/register", new
         {
             firstName = "Test",
             lastName = "User",
@@ -56,6 +59,8 @@ public class AuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task Register_WithEmptyPassword_ReturnsBadRequest()
     {
+        var client = _factory.CreateClient();
+
         var request = new
         {
             firstName = "Test",
@@ -64,7 +69,7 @@ public class AuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
             password = ""
         };
 
-        var response = await _client.PostAsJsonAsync("/api/Auth/register", request);
+        var response = await client.PostAsJsonAsync("/api/Auth/register", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -72,10 +77,11 @@ public class AuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task Login_WithValidCredentials_ReturnsTokenInBody()
     {
+        var client = _factory.CreateClient();
         var email = $"login_{Guid.NewGuid():N}@example.com";
         var password = "Test1234!";
 
-        await _client.PostAsJsonAsync("/api/Auth/register", new
+        await client.PostAsJsonAsync("/api/Auth/register", new
         {
             firstName = "Test",
             lastName = "User",
@@ -83,7 +89,7 @@ public class AuthIntegrationTests : IClassFixture<CustomWebApplicationFactory>
             password
         });
 
-        var response = await _client.PostAsJsonAsync("/api/Auth/login", new
+        var response = await client.PostAsJsonAsync("/api/Auth/login", new
         {
             email,
             password

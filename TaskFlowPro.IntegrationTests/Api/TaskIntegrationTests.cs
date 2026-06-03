@@ -95,8 +95,6 @@ public class TaskIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     {
         var (client, _, projectId) = await CreateAuthenticatedClientWithProjectAsync();
 
-        // Usamos StringContent con JSON raw para que dueDate llegue como DateTime,
-        // no como string, evitando el mismatch de tipos en el model binder.
         var dueDate = DateTime.UtcNow.AddDays(7).ToString("yyyy-MM-ddTHH:mm:ssZ");
         var json = $@"{{""title"":""Tarea con fecha"",""priority"":0,""dueDate"":""{dueDate}""}}";
         var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -104,9 +102,12 @@ public class TaskIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         var response = await client.PostAsync(
             $"/api/projects/{projectId}/tasks", content);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
-
         var body = await response.Content.ReadAsStringAsync();
+
+        // Log del error para diagnóstico
+        response.StatusCode.Should().Be(HttpStatusCode.Created,
+            because: $"el servidor respondió: {body}");
+
         body.Should().Contain("Tarea con fecha");
     }
 

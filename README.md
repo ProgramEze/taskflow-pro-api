@@ -8,6 +8,16 @@ Este proyecto forma parte de mi portfolio como desarrollador backend junior, apl
 
 ---
 
+## Demo en producción
+
+La API está desplegada en Railway y disponible públicamente:
+
+```text
+https://taskflow-pro-api-production.up.railway.app/swagger
+```
+
+---
+
 ## Tecnologías utilizadas
 
 - C#
@@ -16,6 +26,7 @@ Este proyecto forma parte de mi portfolio como desarrollador backend junior, apl
 - PostgreSQL
 - Docker
 - Docker Compose
+- Railway (deploy en la nube)
 - JWT Authentication
 - BCrypt
 - Swagger / OpenAPI
@@ -426,6 +437,8 @@ Excepciones personalizadas implementadas:
 
 ## Base de datos
 
+### Desarrollo local
+
 El proyecto utiliza PostgreSQL levantado con Docker Compose.
 
 El archivo `docker-compose.yml` levanta dos servicios:
@@ -445,13 +458,6 @@ Para detener ambas bases de datos:
 docker compose down
 ```
 
-### Base de datos principal
-
-- Base de datos: `taskflowpro_db`
-- Usuario: `postgres`
-- Password: `postgres`
-- Puerto local: `5433`
-
 Connection string utilizada en desarrollo:
 
 ```json
@@ -460,14 +466,40 @@ Connection string utilizada en desarrollo:
 }
 ```
 
+### Producción (Railway)
+
+En producción la base de datos es provisionada por Railway. La connection string se inyecta mediante la variable de entorno `ConnectionStrings__DefaultConnection` y las migraciones se aplican automáticamente al iniciar la aplicación.
+
 ### Base de datos de testing
 
 - Base de datos: `taskflowpro_test_db`
-- Usuario: `postgres`
-- Password: `postgres`
 - Puerto local: `5434`
 
-La base de datos de testing es utilizada exclusivamente por `CustomWebApplicationFactory` durante la ejecución de los integration tests. Las migraciones se aplican automáticamente al iniciar los tests, por lo que no requiere configuración manual.
+Utilizada exclusivamente por `CustomWebApplicationFactory`. Las migraciones se aplican automáticamente al correr `dotnet test`.
+
+---
+
+## Deploy
+
+La API está desplegada en Railway usando Docker.
+
+### Infraestructura en producción
+
+- **API**: contenedor Docker con ASP.NET Core 8, construido a partir del `Dockerfile` en la raíz del repositorio.
+- **Base de datos**: PostgreSQL provisionado por Railway, conectado a la API mediante Variable References internas.
+- **Migraciones**: se aplican automáticamente al arrancar la aplicación (`db.Database.Migrate()`).
+- **Puerto**: Railway inyecta la variable `PORT`; la app la consume mediante `ASPNETCORE_URLS=http://+:${PORT}`.
+- **Deploy continuo**: cada push a `main` dispara un redeploy automático.
+
+### Variables de entorno requeridas en producción
+
+```text
+ASPNETCORE_ENVIRONMENT              = Production
+ConnectionStrings__DefaultConnection = Host=...;Port=...;Database=...;Username=...;Password=...
+Jwt__Key                            = <clave secreta>
+Jwt__Issuer                         = TaskFlowPro
+Jwt__Audience                       = TaskFlowProUsers
+```
 
 ---
 
@@ -484,7 +516,7 @@ Ejemplo de configuración en `appsettings.json`:
 }
 ```
 
-> Nota: en un entorno productivo, la clave JWT no debería quedar escrita directamente en el archivo `appsettings.json`. Debería manejarse mediante variables de entorno o secretos del entorno de despliegue.
+> Nota: en producción la clave JWT se maneja mediante variables de entorno, no en `appsettings.json`.
 
 ---
 
@@ -502,11 +534,11 @@ Aplicar migraciones a la base de datos principal:
 dotnet ef database update --project .\TaskFlowPro.Infrastructure\TaskFlowPro.Infrastructure.csproj --startup-project .\TaskFlowPro.Api\TaskFlowPro.Api.csproj
 ```
 
-> La base de datos de testing recibe las migraciones automáticamente al correr `dotnet test`.
+> La base de datos de testing y la de producción reciben las migraciones automáticamente.
 
 ---
 
-## Ejecutar el proyecto
+## Ejecutar el proyecto localmente
 
 Desde la raíz de la solución:
 
@@ -673,14 +705,11 @@ Se probaron los flujos principales desde Swagger:
 - Manejo de errores mediante middleware global.
 - Tests unitarios de lógica de aplicación.
 - Integration tests con base de datos real para Auth, Workspaces, Projects y Tasks.
+- Deploy en Railway con PostgreSQL y migraciones automáticas.
 
 ---
 
 ## Estado actual del proyecto
-
-Proyecto en desarrollo.
-
-Actualmente implementa el flujo principal:
 
 ```text
 Autenticación
@@ -705,6 +734,9 @@ Unit Testing
   ↓
 Integration Testing con base de datos real
   (Auth · Workspaces · Projects · Tasks)
+  ↓
+Deploy en Railway
+  (Docker · PostgreSQL · CI/CD automático)
 ```
 
 ---
@@ -712,5 +744,4 @@ Integration Testing con base de datos real
 ## Próximas mejoras
 
 - Autoasignación de tareas para miembros.
-- Deploy en la nube.
 - Frontend web.

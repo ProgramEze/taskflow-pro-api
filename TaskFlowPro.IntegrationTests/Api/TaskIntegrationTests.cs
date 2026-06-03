@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using FluentAssertions;
 using TaskFlowPro.IntegrationTests.Helpers;
@@ -94,15 +95,14 @@ public class TaskIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     {
         var (client, _, projectId) = await CreateAuthenticatedClientWithProjectAsync();
 
-        var request = new
-        {
-            title = "Tarea con fecha",
-            priority = 0,  // Low
-            dueDate = DateTime.UtcNow.AddDays(7).ToString("o")  // ISO 8601
-        };
+        // Usamos StringContent con JSON raw para que dueDate llegue como DateTime,
+        // no como string, evitando el mismatch de tipos en el model binder.
+        var dueDate = DateTime.UtcNow.AddDays(7).ToString("yyyy-MM-ddTHH:mm:ssZ");
+        var json = $@"{{""title"":""Tarea con fecha"",""priority"":0,""dueDate"":""{dueDate}""}}";
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        var response = await client.PostAsJsonAsync(
-            $"/api/projects/{projectId}/tasks", request);
+        var response = await client.PostAsync(
+            $"/api/projects/{projectId}/tasks", content);
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
 

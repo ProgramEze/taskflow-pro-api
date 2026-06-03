@@ -4,7 +4,7 @@ TaskFlow Pro es una API REST desarrollada con ASP.NET Core para la gestión cola
 
 El proyecto permite registrar usuarios, iniciar sesión con JWT, crear espacios de trabajo, administrar proyectos, gestionar miembros, crear tareas, asignarlas a usuarios, modificar su estado y prioridad, realizar bajas lógicas, agregar comentarios, y consultar tareas mediante filtros, búsqueda y paginación.
 
-Este proyecto forma parte de mi portfolio como desarrollador backend junior, aplicando buenas prácticas de arquitectura, autenticación, autorización, persistencia de datos, manejo global de errores, documentación de API, consultas paginadas, testing unitario e integración básica.
+Este proyecto forma parte de mi portfolio como desarrollador backend junior, aplicando buenas prácticas de arquitectura, autenticación, autorización, persistencia de datos, manejo global de errores, documentación de API, consultas paginadas, testing unitario e integration tests con base de datos real.
 
 ---
 
@@ -91,12 +91,13 @@ Contiene pruebas unitarias del proyecto:
 
 ### TaskFlowPro.IntegrationTests
 
-Contiene pruebas de integración iniciales:
+Contiene pruebas de integración:
 
 - Tests con xUnit
-- Uso de `WebApplicationFactory`
-- Validación de arranque de la API
-- Prueba de disponibilidad de Swagger en entorno de desarrollo
+- `CustomWebApplicationFactory` con base de datos de testing separada
+- Migraciones aplicadas automáticamente al iniciar los tests
+- Validación de arranque de la API y disponibilidad de Swagger
+- Tests reales contra endpoints de Auth con base de datos PostgreSQL
 
 ---
 
@@ -427,25 +428,24 @@ Excepciones personalizadas implementadas:
 
 El proyecto utiliza PostgreSQL levantado con Docker Compose.
 
-Para iniciar la base de datos:
+El archivo `docker-compose.yml` levanta dos servicios:
+
+- `taskflowpro-postgres`: base de datos principal, disponible en `localhost:5433`.
+- `taskflowpro-postgres-test`: base de datos exclusiva para integration tests, disponible en `localhost:5434`.
+
+Para iniciar ambas bases de datos:
 
 ```powershell
 docker compose up -d
 ```
 
-Para detener la base de datos:
+Para detener ambas bases de datos:
 
 ```powershell
 docker compose down
 ```
 
-El servicio PostgreSQL queda disponible en:
-
-```text
-localhost:5433
-```
-
-El archivo `docker-compose.yml` crea:
+### Base de datos principal
 
 - Base de datos: `taskflowpro_db`
 - Usuario: `postgres`
@@ -459,6 +459,15 @@ Connection string utilizada en desarrollo:
   "DefaultConnection": "Host=localhost;Port=5433;Database=taskflowpro_db;Username=postgres;Password=postgres"
 }
 ```
+
+### Base de datos de testing
+
+- Base de datos: `taskflowpro_test_db`
+- Usuario: `postgres`
+- Password: `postgres`
+- Puerto local: `5434`
+
+La base de datos de testing es utilizada exclusivamente por `CustomWebApplicationFactory` durante la ejecución de los integration tests. Las migraciones se aplican automáticamente al iniciar los tests, por lo que no requiere configuración manual.
 
 ---
 
@@ -487,11 +496,13 @@ Crear una migración:
 dotnet ef migrations add InitialCreate --project .\TaskFlowPro.Infrastructure\TaskFlowPro.Infrastructure.csproj --startup-project .\TaskFlowPro.Api\TaskFlowPro.Api.csproj --output-dir Data\Migrations
 ```
 
-Aplicar migraciones a la base de datos:
+Aplicar migraciones a la base de datos principal:
 
 ```powershell
 dotnet ef database update --project .\TaskFlowPro.Infrastructure\TaskFlowPro.Infrastructure.csproj --startup-project .\TaskFlowPro.Api\TaskFlowPro.Api.csproj
 ```
+
+> La base de datos de testing recibe las migraciones automáticamente al correr `dotnet test`.
 
 ---
 
@@ -513,7 +524,7 @@ http://localhost:5052/swagger
 
 ## Testing
 
-El proyecto incluye pruebas unitarias y una prueba inicial de integración para validar lógica de aplicación y arranque de API.
+El proyecto incluye pruebas unitarias e integration tests con base de datos real.
 
 Tecnologías utilizadas para testing:
 
@@ -565,18 +576,25 @@ Actualmente se incluyen pruebas unitarias para:
 
 ### Integration tests
 
-Actualmente se incluye una prueba de integración inicial:
+Los integration tests levantan la API en memoria usando `CustomWebApplicationFactory`, que reemplaza la base de datos principal por `taskflowpro_test_db` y aplica las migraciones automáticamente antes de ejecutar los tests.
 
-- Levantar la API en memoria con `WebApplicationFactory`.
-- Ejecutar la aplicación en entorno `Development`.
+#### SwaggerTests
+
 - Verificar que Swagger responda correctamente en `/swagger/v1/swagger.json`.
+
+#### AuthIntegrationTests
+
+- Registrar un usuario con datos válidos devuelve `201 Created`.
+- Registrar un usuario con email duplicado devuelve `409 Conflict`.
+- Registrar un usuario con contraseña vacía devuelve `400 Bad Request`.
+- Hacer login con credenciales válidas devuelve `200 OK` con token en el body.
 
 Resultado esperado:
 
 ```text
 TaskFlowPro.Tests              -> 21 tests correctos
-TaskFlowPro.IntegrationTests   -> 1 test correcto
-Total general                  -> 22 tests correctos
+TaskFlowPro.IntegrationTests   ->  5 tests correctos
+Total general                  -> 26 tests correctos
 ```
 
 ---
@@ -604,7 +622,7 @@ Se probaron los flujos principales desde Swagger:
 - Autorización centralizada en Projects, Tasks, Members y Comments.
 - Manejo de errores mediante middleware global.
 - Tests unitarios de lógica de aplicación.
-- Test inicial de integración para validar arranque de API y disponibilidad de Swagger.
+- Integration tests con base de datos real para endpoints de Auth.
 
 ---
 
@@ -635,7 +653,7 @@ Centralized Authorization
   ↓
 Unit Testing
   ↓
-Integration Testing
+Integration Testing con base de datos real
 ```
 
 ---
@@ -643,7 +661,6 @@ Integration Testing
 ## Próximas mejoras
 
 - Autoasignación de tareas para miembros.
-- Tests de integración con endpoints reales de Auth.
-- Base de datos de pruebas separada o en memoria para integration tests.
+- Ampliar integration tests a otros endpoints (Workspaces, Projects, Tasks).
 - Deploy en la nube.
 - Frontend web.

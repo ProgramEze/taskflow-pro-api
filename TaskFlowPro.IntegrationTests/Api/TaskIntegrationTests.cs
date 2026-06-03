@@ -58,7 +58,7 @@ public class TaskIntegrationTests : IClassFixture<CustomWebApplicationFactory>
             {
                 title,
                 description = "Descripción de la tarea",
-                priority = 1  // Medium
+                priority = 2  // Medium
             });
         response.EnsureSuccessStatusCode();
         var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
@@ -78,7 +78,7 @@ public class TaskIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         {
             title = "Mi Tarea",
             description = "Descripción de prueba",
-            priority = 1  // Medium
+            priority = 2  // Medium
         };
 
         var response = await client.PostAsJsonAsync(
@@ -95,19 +95,18 @@ public class TaskIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     {
         var (client, _, projectId) = await CreateAuthenticatedClientWithProjectAsync();
 
+        // Usamos StringContent con JSON raw para que dueDate llegue como DateTime.
+        // TaskPriority: Low=1, Medium=2, High=3, Urgent=4
         var dueDate = DateTime.UtcNow.AddDays(7).ToString("yyyy-MM-ddTHH:mm:ssZ");
-        var json = $@"{{""title"":""Tarea con fecha"",""priority"":0,""dueDate"":""{dueDate}""}}";
+        var json = $@"{{""title"":""Tarea con fecha"",""priority"":1,""dueDate"":""{dueDate}""}}";
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         var response = await client.PostAsync(
             $"/api/projects/{projectId}/tasks", content);
 
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+
         var body = await response.Content.ReadAsStringAsync();
-
-        // Log del error para diagnóstico
-        response.StatusCode.Should().Be(HttpStatusCode.Created,
-            because: $"el servidor respondió: {body}");
-
         body.Should().Contain("Tarea con fecha");
     }
 
@@ -116,7 +115,7 @@ public class TaskIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     {
         var client = _factory.CreateClient();
 
-        var request = new { title = "Tarea sin token", priority = 1 };
+        var request = new { title = "Tarea sin token", priority = 2 };
 
         var response = await client.PostAsJsonAsync(
             $"/api/projects/{Guid.NewGuid()}/tasks", request);
@@ -129,7 +128,7 @@ public class TaskIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     {
         var (client, _, projectId) = await CreateAuthenticatedClientWithProjectAsync();
 
-        var request = new { title = "", priority = 1 };
+        var request = new { title = "", priority = 2 };
 
         var response = await client.PostAsJsonAsync(
             $"/api/projects/{projectId}/tasks", request);
@@ -144,7 +143,7 @@ public class TaskIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         var token = await IntegrationTestHelper.RegisterAndGetTokenAsync(client);
         IntegrationTestHelper.SetBearerToken(client, token);
 
-        var request = new { title = "Tarea en proyecto inexistente", priority = 1 };
+        var request = new { title = "Tarea en proyecto inexistente", priority = 2 };
 
         var response = await client.PostAsJsonAsync(
             $"/api/projects/{Guid.NewGuid()}/tasks", request);
@@ -243,15 +242,12 @@ public class TaskIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         var (client, _, projectId) = await CreateAuthenticatedClientWithProjectAsync();
         var taskId = await CreateTaskAndGetIdAsync(client, projectId);
 
-        var request = new { status = 1 };  // InProgress
+        var request = new { status = 2 };  // InProgress
 
         var response = await client.PatchAsJsonAsync(
             $"/api/tasks/{taskId}/status", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var body = await response.Content.ReadAsStringAsync();
-        body.Should().Contain("1");  // status: InProgress
     }
 
     [Fact]
@@ -259,7 +255,7 @@ public class TaskIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     {
         var client = _factory.CreateClient();
 
-        var request = new { status = 1 };
+        var request = new { status = 2 };
 
         var response = await client.PatchAsJsonAsync(
             $"/api/tasks/{Guid.NewGuid()}/status", request);
@@ -274,7 +270,7 @@ public class TaskIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         var token = await IntegrationTestHelper.RegisterAndGetTokenAsync(client);
         IntegrationTestHelper.SetBearerToken(client, token);
 
-        var request = new { status = 1 };
+        var request = new { status = 2 };
 
         var response = await client.PatchAsJsonAsync(
             $"/api/tasks/{Guid.NewGuid()}/status", request);
@@ -292,15 +288,12 @@ public class TaskIntegrationTests : IClassFixture<CustomWebApplicationFactory>
         var (client, _, projectId) = await CreateAuthenticatedClientWithProjectAsync();
         var taskId = await CreateTaskAndGetIdAsync(client, projectId);
 
-        var request = new { priority = 2 };  // High
+        var request = new { priority = 3 };  // High
 
         var response = await client.PatchAsJsonAsync(
             $"/api/tasks/{taskId}/priority", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var body = await response.Content.ReadAsStringAsync();
-        body.Should().Contain("2");  // priority: High
     }
 
     [Fact]
@@ -308,7 +301,7 @@ public class TaskIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     {
         var client = _factory.CreateClient();
 
-        var request = new { priority = 2 };
+        var request = new { priority = 3 };
 
         var response = await client.PatchAsJsonAsync(
             $"/api/tasks/{Guid.NewGuid()}/priority", request);

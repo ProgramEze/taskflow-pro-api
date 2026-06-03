@@ -18,6 +18,12 @@ La API está desplegada en Railway y disponible públicamente:
 https://taskflow-pro-api-production.up.railway.app/swagger
 ```
 
+El frontend está desplegado en Railway:
+
+```text
+https://taskflow-pro-frontend-production-5dc3.up.railway.app
+```
+
 ---
 
 ## Tecnologías utilizadas
@@ -505,6 +511,7 @@ ConnectionStrings__DefaultConnection = Host=...;Port=...;Database=...;Username=.
 Jwt__Key                            = <clave secreta>
 Jwt__Issuer                         = TaskFlowPro
 Jwt__Audience                       = TaskFlowProUsers
+Cors__AllowedOrigins__0             = https://taskflow-pro-frontend-production-5dc3.up.railway.app
 ```
 
 ---

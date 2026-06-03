@@ -108,7 +108,7 @@ Contiene pruebas de integración:
 - `CustomWebApplicationFactory` con base de datos de testing separada
 - Migraciones aplicadas automáticamente al iniciar los tests
 - Validación de arranque de la API y disponibilidad de Swagger
-- Tests reales contra endpoints de Auth, Workspaces, Projects y Tasks con base de datos PostgreSQL
+- Tests reales contra endpoints de Auth, Workspaces, Projects, Tasks y asignación de tareas con base de datos PostgreSQL
 
 ---
 
@@ -201,13 +201,15 @@ GET /api/projects/{projectId}
 - Editar tarea.
 - Baja lógica de tarea.
 - Asignar tareas a miembros activos del workspace.
+- Autoasignación: cualquier miembro puede asignarse a sí mismo.
+- Asignación a otro usuario: solo Owner/Admin.
+- Validación de conflicto: no se puede asignar una tarea que ya tiene asignado a alguien.
 - Filtrar tareas por estado.
 - Filtrar tareas por prioridad.
 - Filtrar tareas por usuario asignado.
 - Buscar tareas por texto en título o descripción.
 - Paginar resultados.
 - Autorización centralizada por workspace.
-- Solo Owner/Admin pueden asignar tareas.
 
 Endpoints principales:
 
@@ -370,8 +372,10 @@ Reglas principales implementadas:
 - Solo Owner/Admin pueden crear proyectos.
 - Los miembros activos pueden ver proyectos y tareas del workspace.
 - Los miembros activos pueden crear tareas.
+- Cualquier miembro activo puede autoasignarse una tarea.
+- Solo Owner/Admin pueden asignar una tarea a otro usuario.
 - Una tarea solo puede asignarse a un usuario que sea miembro activo del workspace.
-- Solo Owner/Admin pueden asignar tareas.
+- No se puede asignar una tarea que ya tiene un usuario asignado.
 - Los miembros activos pueden crear y listar comentarios.
 - Solo el autor puede editar o eliminar sus propios comentarios.
 
@@ -671,12 +675,24 @@ Cada test crea su propio `HttpClient` mediante `_factory.CreateClient()` para ga
 - Eliminar una tarea con ID inexistente devuelve `404 Not Found`.
 - Eliminar una tarea ya eliminada (soft delete) devuelve `404 Not Found`.
 
-Resultado esperado al correr `dotnet test`:
+#### TaskAssignIntegrationTests
+
+- Owner asigna una tarea a otro miembro devuelve `200 OK` con `assignedUserId` correcto.
+- Miembro se autoasigna una tarea devuelve `200 OK` con `assignedUserId` correcto.
+- Owner se autoasigna una tarea devuelve `200 OK`.
+- Asignar una tarea sin token devuelve `401 Unauthorized`.
+- Miembro intenta asignar una tarea a otro usuario devuelve `403 Forbidden`.
+- Usuario fuera del workspace intenta asignarse una tarea devuelve `403 Forbidden`.
+- Asignar una tarea inexistente devuelve `404 Not Found`.
+- Asignar una tarea que ya tiene asignado devuelve `409 Conflict`.
+- Owner intenta asignar a un usuario que no pertenece al workspace devuelve `400 Bad Request`.
+
+Resultado al correr `dotnet test`:
 
 ```text
 TaskFlowPro.Tests              -> 21 tests correctos
-TaskFlowPro.IntegrationTests   -> 42 tests correctos
-Total general                  -> 63 tests correctos
+TaskFlowPro.IntegrationTests   -> 53 tests correctos
+Total general                  -> 74 tests correctos
 ```
 
 ---
@@ -695,7 +711,9 @@ Se probaron los flujos principales desde Swagger:
 - Gestión de miembros del workspace.
 - Cambio de roles de miembros.
 - Baja lógica de miembros.
-- Asignación de tareas a miembros activos del workspace.
+- Autoasignación de tareas por miembros.
+- Asignación de tareas a otros miembros por Owner/Admin.
+- Validación de conflicto al asignar una tarea ya asignada.
 - Validación de error al intentar asignar una tarea a un usuario externo al workspace.
 - Listado paginado de tareas.
 - Filtros de tareas por estado, prioridad y usuario asignado.
@@ -704,7 +722,7 @@ Se probaron los flujos principales desde Swagger:
 - Autorización centralizada en Projects, Tasks, Members y Comments.
 - Manejo de errores mediante middleware global.
 - Tests unitarios de lógica de aplicación.
-- Integration tests con base de datos real para Auth, Workspaces, Projects y Tasks.
+- Integration tests con base de datos real para Auth, Workspaces, Projects, Tasks y asignación de tareas.
 - Deploy en Railway con PostgreSQL y migraciones automáticas.
 
 ---
@@ -724,7 +742,7 @@ Tasks
   ↓
 Filtering & Pagination
   ↓
-Assignment
+Assignment (autoasignación + asignación por Owner/Admin)
   ↓
 Comments
   ↓
@@ -733,7 +751,7 @@ Centralized Authorization
 Unit Testing
   ↓
 Integration Testing con base de datos real
-  (Auth · Workspaces · Projects · Tasks)
+  (Auth · Workspaces · Projects · Tasks · Task Assignment)
   ↓
 Deploy en Railway
   (Docker · PostgreSQL · CI/CD automático)
@@ -743,5 +761,4 @@ Deploy en Railway
 
 ## Próximas mejoras
 
-- Autoasignación de tareas para miembros.
 - Frontend web.

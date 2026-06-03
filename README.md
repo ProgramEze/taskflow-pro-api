@@ -97,7 +97,7 @@ Contiene pruebas de integración:
 - `CustomWebApplicationFactory` con base de datos de testing separada
 - Migraciones aplicadas automáticamente al iniciar los tests
 - Validación de arranque de la API y disponibilidad de Swagger
-- Tests reales contra endpoints de Auth con base de datos PostgreSQL
+- Tests reales contra endpoints de Auth, Workspaces, Projects y Tasks con base de datos PostgreSQL
 
 ---
 
@@ -578,6 +578,8 @@ Actualmente se incluyen pruebas unitarias para:
 
 Los integration tests levantan la API en memoria usando `CustomWebApplicationFactory`, que reemplaza la base de datos principal por `taskflowpro_test_db` y aplica las migraciones automáticamente antes de ejecutar los tests.
 
+Cada test crea su propio `HttpClient` mediante `_factory.CreateClient()` para garantizar aislamiento total entre pruebas.
+
 #### SwaggerTests
 
 - Verificar que Swagger responda correctamente en `/swagger/v1/swagger.json`.
@@ -589,12 +591,60 @@ Los integration tests levantan la API en memoria usando `CustomWebApplicationFac
 - Registrar un usuario con contraseña vacía devuelve `400 Bad Request`.
 - Hacer login con credenciales válidas devuelve `200 OK` con token en el body.
 
-Resultado esperado:
+#### WorkspaceIntegrationTests
+
+- Crear un workspace con datos válidos devuelve `201 Created`.
+- Crear un workspace sin token devuelve `401 Unauthorized`.
+- Crear un workspace con nombre vacío devuelve `400 Bad Request`.
+- Listar workspaces del usuario autenticado devuelve `200 OK`.
+- Listar workspaces sin token devuelve `401 Unauthorized`.
+
+#### ProjectIntegrationTests
+
+- Crear un proyecto con datos válidos devuelve `201 Created`.
+- Crear un proyecto con fecha de vencimiento devuelve `201 Created`.
+- Crear un proyecto sin token devuelve `401 Unauthorized`.
+- Crear un proyecto con nombre vacío devuelve `400 Bad Request`.
+- Crear un proyecto en un workspace inexistente devuelve `404 Not Found`.
+- Listar proyectos del workspace con token devuelve `200 OK`.
+- Listar proyectos sin token devuelve `401 Unauthorized`.
+- Listar proyectos en un workspace inexistente devuelve `404 Not Found`.
+- Obtener un proyecto por ID válido devuelve `200 OK`.
+- Obtener un proyecto sin token devuelve `401 Unauthorized`.
+- Obtener un proyecto con ID inexistente devuelve `404 Not Found`.
+
+#### TaskIntegrationTests
+
+- Crear una tarea con datos válidos devuelve `201 Created`.
+- Crear una tarea con fecha de vencimiento devuelve `201 Created`.
+- Crear una tarea sin token devuelve `401 Unauthorized`.
+- Crear una tarea con título vacío devuelve `400 Bad Request`.
+- Crear una tarea en un proyecto inexistente devuelve `404 Not Found`.
+- Listar tareas del proyecto con token devuelve `200 OK`.
+- Listar tareas sin token devuelve `401 Unauthorized`.
+- Listar tareas en un proyecto inexistente devuelve `404 Not Found`.
+- Obtener una tarea por ID válido devuelve `200 OK`.
+- Obtener una tarea sin token devuelve `401 Unauthorized`.
+- Obtener una tarea con ID inexistente devuelve `404 Not Found`.
+- Cambiar el estado de una tarea devuelve `200 OK`.
+- Cambiar el estado sin token devuelve `401 Unauthorized`.
+- Cambiar el estado de una tarea inexistente devuelve `404 Not Found`.
+- Cambiar la prioridad de una tarea devuelve `200 OK`.
+- Cambiar la prioridad sin token devuelve `401 Unauthorized`.
+- Actualizar una tarea con datos válidos devuelve `200 OK`.
+- Actualizar una tarea con título vacío devuelve `400 Bad Request`.
+- Actualizar una tarea sin token devuelve `401 Unauthorized`.
+- Eliminar una tarea existente devuelve `204 No Content`.
+- Eliminar una tarea sin token devuelve `401 Unauthorized`.
+- Eliminar una tarea con ID inexistente devuelve `404 Not Found`.
+- Eliminar una tarea ya eliminada (soft delete) devuelve `404 Not Found`.
+
+Resultado esperado al correr `dotnet test`:
 
 ```text
 TaskFlowPro.Tests              -> 21 tests correctos
-TaskFlowPro.IntegrationTests   ->  5 tests correctos
-Total general                  -> 26 tests correctos
+TaskFlowPro.IntegrationTests   -> 42 tests correctos
+Total general                  -> 63 tests correctos
 ```
 
 ---
@@ -622,7 +672,7 @@ Se probaron los flujos principales desde Swagger:
 - Autorización centralizada en Projects, Tasks, Members y Comments.
 - Manejo de errores mediante middleware global.
 - Tests unitarios de lógica de aplicación.
-- Integration tests con base de datos real para endpoints de Auth.
+- Integration tests con base de datos real para Auth, Workspaces, Projects y Tasks.
 
 ---
 
@@ -654,6 +704,7 @@ Centralized Authorization
 Unit Testing
   ↓
 Integration Testing con base de datos real
+  (Auth · Workspaces · Projects · Tasks)
 ```
 
 ---
@@ -661,6 +712,5 @@ Integration Testing con base de datos real
 ## Próximas mejoras
 
 - Autoasignación de tareas para miembros.
-- Ampliar integration tests a otros endpoints (Workspaces, Projects, Tasks).
 - Deploy en la nube.
 - Frontend web.

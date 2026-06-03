@@ -6,6 +6,8 @@ El proyecto permite registrar usuarios, iniciar sesión con JWT, crear espacios 
 
 Este proyecto forma parte de mi portfolio como desarrollador backend junior, aplicando buenas prácticas de arquitectura, autenticación, autorización, persistencia de datos, manejo global de errores, documentación de API, consultas paginadas, testing unitario e integration tests con base de datos real.
 
+> **Frontend web:** [taskflow-pro-frontend](https://github.com/ProgramEze/taskflow-pro-frontend)
+
 ---
 
 ## Demo en producción
@@ -755,10 +757,7 @@ Integration Testing con base de datos real
   ↓
 Deploy en Railway
   (Docker · PostgreSQL · CI/CD automático)
+  ↓
+Frontend web
+  (Angular 17 · TailwindCSS · Deploy en Railway)
 ```
-
----
-
-## Próximas mejoras
-
-- Frontend web.

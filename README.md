@@ -592,10 +592,12 @@ Actualmente se incluyen pruebas unitarias para:
 #### TaskService
 
 - Crear una tarea correctamente.
-- Lanzar `NotFoundException` cuando el proyecto no existe.
-- Lanzar `ForbiddenException` cuando el usuario no pertenece al workspace.
+- Lanzar `NotFoundException` cuando el proyecto no existe (CreateAsync).
+- Lanzar `ForbiddenException` cuando el usuario no pertenece al workspace (CreateAsync).
 - Lanzar `BadRequestException` cuando el título de la tarea está vacío.
 - Devolver tareas paginadas correctamente.
+- Lanzar `NotFoundException` cuando el proyecto no existe (GetByProjectIdAsync).
+- Lanzar `ForbiddenException` cuando el usuario no pertenece al workspace (GetByProjectIdAsync).
 
 #### WorkspaceMemberService
 
@@ -699,9 +701,9 @@ Cada test crea su propio `HttpClient` mediante `_factory.CreateClient()` para ga
 Resultado al correr `dotnet test`:
 
 ```text
-TaskFlowPro.Tests              -> 21 tests correctos
+TaskFlowPro.Tests              -> 24 tests correctos
 TaskFlowPro.IntegrationTests   -> 53 tests correctos
-Total general                  -> 74 tests correctos
+Total general                  -> 77 tests correctos
 ```
 
 ---

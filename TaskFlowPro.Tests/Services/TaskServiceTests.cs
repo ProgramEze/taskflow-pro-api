@@ -124,6 +124,34 @@ public class TaskServiceTests
         );
     }
 
+    /*Bien, escribí los tests que quieras.Te propongo estos tres escenarios para practicar, elegí el que quieras arrancar:
+        Opción A — GetByProjectIdAsync cuando el usuario no es miembro del workspace → debe lanzar ForbiddenException
+        Opción B — GetByProjectIdAsync cuando el proyecto no existe → debe lanzar NotFoundException
+        Opción C — CreateAsync cuando el usuario no es miembro → debe lanzar ForbiddenException y nunca llamar AddAsync*/
+
+    [Fact]
+    public async Task GetByProjectIdAsync_ShouldThrowNotFoundException_WhenProjectDoesNotExist()
+    {
+        // Arrange
+        var projectId = Guid.NewGuid();
+
+        _projectRepositoryMock
+            .Setup(repository => repository.GetByIdAsync(projectId))
+            .ReturnsAsync((Project?)null);
+
+        // Act
+        var act = async () => await _taskService.GetByProjectIdAsync(
+            Guid.NewGuid(),
+            projectId,
+            new TaskQueryParameters { PageNumber = 1, PageSize = 10 }
+        );
+
+        // Assert
+        await act.Should()
+            .ThrowAsync<NotFoundException>()
+            .WithMessage("Proyecto no encontrado.");
+    }
+
     [Fact]
     public async Task CreateAsync_ShouldThrowForbiddenException_WhenUserIsNotWorkspaceMember()
     {
@@ -173,6 +201,43 @@ public class TaskServiceTests
     }
 
     [Fact]
+    public async Task GetByProjectIdAsync_ShouldThrowForbiddenException_WhenUserIsNotWorkspaceMember()
+    {
+        // Arrange
+        var currentUserId = Guid.NewGuid();
+        var anotherUserId = Guid.NewGuid();
+        var workspaceId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+
+        var project = CreateProjectWithMember(
+            projectId,
+            workspaceId,
+            anotherUserId,
+            WorkspaceRole.Member
+        );
+
+        _projectRepositoryMock
+            .Setup(repository => repository.GetByIdAsync(projectId))
+            .ReturnsAsync(project);
+
+        _workspaceAuthorizationServiceMock
+            .Setup(service => service.EnsureMember(project.Workspace, currentUserId))
+            .Throws(new ForbiddenException("No pertenecés a este workspace."));
+
+        // Act
+        var act = async () => await _taskService.GetByProjectIdAsync(
+            currentUserId,
+            projectId,
+            new TaskQueryParameters { PageNumber = 1, PageSize = 10 }
+        );
+
+        // Assert
+        await act.Should()
+            .ThrowAsync<ForbiddenException>()
+            .WithMessage("No pertenecés a este workspace.");
+    }
+
+    [Fact]
     public async Task CreateAsync_ShouldThrowBadRequestException_WhenTitleIsEmpty()
     {
         // Arrange
@@ -218,6 +283,33 @@ public class TaskServiceTests
             service => service.EnsureMember(project.Workspace, currentUserId),
             Times.Once
         );
+    }
+
+    [Fact]
+    public async Task CreateAsync_ShouldThrowNotFoundException_WhenProjectIsNotFound()
+    {
+        // Arrange
+        var projectId = Guid.NewGuid();
+
+        _projectRepositoryMock
+            .Setup(repository => repository.GetByIdAsync(projectId))
+            .ReturnsAsync((Project?)null);
+
+        // Act
+        var act = async () => await _taskService.CreateAsync(
+            Guid.NewGuid(),
+            projectId,
+            new CreateTaskRequest
+            {
+                Title = "Crear tarea",
+                Priority = TaskPriority.Medium
+            }
+        );
+
+        // Assert
+        await act.Should()
+            .ThrowAsync<NotFoundException>()
+            .WithMessage("Proyecto no encontrado.");
     }
 
     [Fact]

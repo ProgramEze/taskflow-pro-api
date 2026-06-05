@@ -47,6 +47,7 @@ public class NotificationRepository : INotificationRepository
 
     public async Task CreateAsync(Notification notification)
     {
+        notification.Id = ObjectId.GenerateNewId().ToString();
         await _collection.InsertOneAsync(notification);
     }
 

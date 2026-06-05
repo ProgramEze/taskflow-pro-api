@@ -111,20 +111,40 @@ public class TaskAssignIntegrationTests : IClassFixture<CustomWebApplicationFact
     // ─────────────────────────────────────────────────────────────────────────
 
     [Fact]
+    // Prueba de integración para verificar que el endpoint de asignación de tareas funcione correctamente cuando un owner 
+    // asigna una tarea a otro miembro del workspace. Crea un owner con un proyecto, agrega un miembro al workspace, crea una tarea 
+    // y luego envía una solicitud PATCH para asignar la tarea al miembro. 
+    // Verifica que la respuesta tenga un código de estado HTTP 200 OK y que el cuerpo de la respuesta contenga el Id del usuario asignado. 
+    // Esto asegura que la tarea se asignó correctamente al miembro del workspace.
     public async Task Assign_OwnerAssignsAnotherMember_ReturnsOkWithAssignedUserId()
     {
+        // Arrange
+        // Crea un owner con un proyecto, agrega un miembro al workspace, crea una tarea y luego envía una solicitud PATCH para asignar la tarea al miembro. Verifica que la respuesta tenga un código de estado HTTP 200 OK y que el cuerpo de la respuesta contenga el Id del usuario asignado.
         var (ownerClient, _, workspaceId, projectId) = await CreateOwnerWithProjectAsync();
+
+        // Agrega un miembro al workspace y obtiene su client y userId.
         var (_, memberId) = await AddMemberToWorkspaceAsync(ownerClient, workspaceId);
+
+        // Crea una tarea en el proyecto y obtiene su Id.
         var taskId = await CreateTaskAndGetIdAsync(ownerClient, projectId);
 
+        // Act
+        // El owner asigna la tarea al miembro → 200 OK + assignedUserId en el cuerpo
         var response = await ownerClient.PatchAsJsonAsync(
             $"/api/tasks/{taskId}/assign",
             new { assignedUserId = memberId });
 
+        // Assert
+        // Verifica que la respuesta tenga un código de estado HTTP 200 OK, lo que indica que la tarea se asignó correctamente al miembro del workspace.
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
+        // Lee el cuerpo de la respuesta como una cadena, lo parsea como JSON y verifica que la propiedad "assignedUserId" en el cuerpo de la respuesta sea igual al Id del miembro al que se asignó la tarea. Esto asegura que la tarea se asignó correctamente al miembro del workspace.
         var body = await response.Content.ReadAsStringAsync();
+
+        // Parsea el cuerpo de la respuesta como JSON y verifica que la propiedad "assignedUserId" en el cuerpo de la respuesta sea igual al Id del miembro al que se asignó la tarea, lo que indica que la tarea se asignó correctamente al miembro del workspace.
         var json = JsonDocument.Parse(body);
+
+        // Verifica que la propiedad "assignedUserId" en el cuerpo de la respuesta sea igual al Id del miembro al que se asignó la tarea, lo que indica que la tarea se asignó correctamente al miembro del workspace.
         json.RootElement.GetProperty("assignedUserId").GetGuid().Should().Be(memberId);
     }
 

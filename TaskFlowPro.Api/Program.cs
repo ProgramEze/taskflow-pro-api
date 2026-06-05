@@ -9,10 +9,20 @@ using TaskFlowPro.Infrastructure.Auth;
 using TaskFlowPro.Infrastructure.Data;
 using TaskFlowPro.Infrastructure.Repositories;
 using TaskFlowPro.Api.Middlewares;
+using TaskFlowPro.Infrastructure.Persistence.MongoDB;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Serializers;
+
+BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+
+// MongoDB
+builder.Services.Configure<MongoDbSettings>(
+builder.Configuration.GetSection("MongoDbSettings"));
 
 builder.Services.AddEndpointsApiExplorer();
 
@@ -88,6 +98,9 @@ builder.Services.AddScoped<ITaskService, TaskService>();
 
 builder.Services.AddScoped<ICommentRepository, CommentRepository>();
 builder.Services.AddScoped<ICommentService, CommentService>();
+
+builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<NotificationService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("JWT Key no configurada.");

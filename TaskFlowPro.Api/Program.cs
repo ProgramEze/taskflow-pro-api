@@ -14,11 +14,13 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 
-if (!BsonClassMap.IsClassMapRegistered(typeof(Guid)) &&
-    BsonSerializer.LookupSerializer(typeof(Guid)) is MongoDB.Bson.Serialization.Serializers.GuidSerializer existingSerializer &&
-    existingSerializer.GuidRepresentation != GuidRepresentation.Standard)
+try
 {
     BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
+}
+catch (BsonSerializationException)
+{
+    // El serializer ya fue registrado (ocurre en tests de integración con múltiples instancias)
 }
 
 var builder = WebApplication.CreateBuilder(args);

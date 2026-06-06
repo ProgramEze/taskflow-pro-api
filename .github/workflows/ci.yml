@@ -45,3 +45,5 @@ jobs:
 
       - name: Correr tests de integración
         run: dotnet test TaskFlowPro.IntegrationTests --no-build --verbosity normal
+        env:
+          ConnectionStrings__DefaultConnection: "Host=localhost;Port=5434;Database=taskflowpro_test_db;Username=postgres;Password=postgres"

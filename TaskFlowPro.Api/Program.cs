@@ -14,7 +14,12 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 
-BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
+if (!BsonClassMap.IsClassMapRegistered(typeof(Guid)) &&
+    BsonSerializer.LookupSerializer(typeof(Guid)) is MongoDB.Bson.Serialization.Serializers.GuidSerializer existingSerializer &&
+    existingSerializer.GuidRepresentation != GuidRepresentation.Standard)
+{
+    BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
+}
 
 var builder = WebApplication.CreateBuilder(args);
 

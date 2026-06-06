@@ -1,10 +1,12 @@
 # TaskFlow Pro API
 
+[![CI](https://github.com/ProgramEze/taskflow-pro-api/actions/workflows/ci.yml/badge.svg)](https://github.com/ProgramEze/taskflow-pro-api/actions/workflows/ci.yml)
+
 TaskFlow Pro es una API REST desarrollada con ASP.NET Core para la gestión colaborativa de proyectos y tareas en equipos pequeños.
 
-El proyecto permite registrar usuarios, iniciar sesión con JWT, crear espacios de trabajo, administrar proyectos, gestionar miembros, crear tareas, asignarlas a usuarios, modificar su estado y prioridad, realizar bajas lógicas, agregar comentarios, y consultar tareas mediante filtros, búsqueda y paginación.
+El proyecto permite registrar usuarios, iniciar sesión con JWT, crear espacios de trabajo, administrar proyectos, gestionar miembros, crear tareas, asignarlas a usuarios, modificar su estado y prioridad, realizar bajas lógicas, agregar comentarios, consultar tareas mediante filtros, búsqueda y paginación, y recibir notificaciones almacenadas en MongoDB.
 
-Este proyecto forma parte de mi portfolio como desarrollador backend junior, aplicando buenas prácticas de arquitectura, autenticación, autorización, persistencia de datos, manejo global de errores, documentación de API, consultas paginadas, testing unitario e integration tests con base de datos real.
+Este proyecto forma parte de mi portfolio como desarrollador backend junior, aplicando buenas prácticas de arquitectura, autenticación, autorización, persistencia de datos, manejo global de errores, documentación de API, consultas paginadas, testing unitario, integration tests con base de datos real, y CI con GitHub Actions.
 
 > **Frontend web:** [taskflow-pro-frontend](https://github.com/ProgramEze/taskflow-pro-frontend)
 
@@ -32,9 +34,11 @@ https://taskflow-pro-frontend-production-5dc3.up.railway.app
 - ASP.NET Core 8
 - Entity Framework Core
 - PostgreSQL
+- MongoDB
 - Docker
 - Docker Compose
 - Railway (deploy en la nube)
+- GitHub Actions (CI)
 - JWT Authentication
 - BCrypt
 - Swagger / OpenAPI
@@ -95,9 +99,10 @@ Contiene detalles técnicos:
 
 - Entity Framework Core
 - AppDbContext
-- Repositories
+- Repositories (PostgreSQL)
+- MongoDB settings y NotificationRepository
 - Generación de JWT
-- Acceso a PostgreSQL
+- Acceso a PostgreSQL y MongoDB
 
 ### TaskFlowPro.Tests
 
@@ -301,6 +306,26 @@ DELETE /api/comments/{commentId}
 
 ---
 
+### Notifications (MongoDB)
+
+- Crear notificaciones.
+- Listar notificaciones del usuario autenticado.
+- Marcar notificación como leída.
+- Eliminar notificación.
+- Almacenamiento en MongoDB como base de datos NoSQL separada de PostgreSQL.
+- Integración en Clean Architecture sin acoplamiento al Domain.
+
+Endpoints principales:
+
+```http
+POST /api/notifications
+GET /api/notifications
+PATCH /api/notifications/{id}/read
+DELETE /api/notifications/{id}
+```
+
+---
+
 ## Autorización por workspace
 
 El proyecto incluye un servicio centralizado de autorización:
@@ -347,6 +372,10 @@ Project
 TaskItem
   ↓
 Comment
+
+User
+  ↓
+Notification (MongoDB)
 ```
 
 Un usuario puede crear workspaces.
@@ -355,6 +384,7 @@ Un workspace contiene proyectos.
 Un proyecto contiene tareas.
 Una tarea puede asignarse a un miembro activo del workspace.
 Una tarea puede tener comentarios.
+Las notificaciones se almacenan en MongoDB de forma independiente.
 
 ---
 
@@ -451,43 +481,79 @@ Excepciones personalizadas implementadas:
 
 ### Desarrollo local
 
-El proyecto utiliza PostgreSQL levantado con Docker Compose.
+El proyecto utiliza PostgreSQL y MongoDB levantados con Docker Compose.
 
-El archivo `docker-compose.yml` levanta dos servicios:
+El archivo `docker-compose.yml` levanta dos servicios de PostgreSQL:
 
 - `taskflowpro-postgres`: base de datos principal, disponible en `localhost:5433`.
 - `taskflowpro-postgres-test`: base de datos exclusiva para integration tests, disponible en `localhost:5434`.
 
-Para iniciar ambas bases de datos:
+MongoDB se configura por separado o puede levantarse con Docker:
+
+```powershell
+docker run -d -p 27017:27017 --name mongodb mongo
+```
+
+Para iniciar las bases de datos de PostgreSQL:
 
 ```powershell
 docker compose up -d
 ```
 
-Para detener ambas bases de datos:
+Para detener:
 
 ```powershell
 docker compose down
 ```
 
-Connection string utilizada en desarrollo:
+Connection strings utilizadas en desarrollo:
 
 ```json
 "ConnectionStrings": {
   "DefaultConnection": "Host=localhost;Port=5433;Database=taskflowpro_db;Username=postgres;Password=postgres"
+},
+"MongoDbSettings": {
+  "ConnectionString": "mongodb://localhost:27017",
+  "DatabaseName": "taskflow_nosql",
+  "NotificationsCollectionName": "notifications"
 }
 ```
 
 ### Producción (Railway)
 
-En producción la base de datos es provisionada por Railway. La connection string se inyecta mediante la variable de entorno `ConnectionStrings__DefaultConnection` y las migraciones se aplican automáticamente al iniciar la aplicación.
+En producción la base de datos PostgreSQL es provisionada por Railway. La connection string se inyecta mediante la variable de entorno `ConnectionStrings__DefaultConnection` y las migraciones se aplican automáticamente al iniciar la aplicación.
 
 ### Base de datos de testing
 
 - Base de datos: `taskflowpro_test_db`
 - Puerto local: `5434`
 
-Utilizada exclusivamente por `CustomWebApplicationFactory`. Las migraciones se aplican automáticamente al correr `dotnet test`.
+Utilizada exclusivamente por `CustomWebApplicationFactory`. Las migraciones se aplican automáticamente al correr `dotnet test`. La connection string puede sobreescribirse mediante la variable de entorno `ConnectionStrings__DefaultConnection` (usado por el pipeline de CI).
+
+---
+
+## CI/CD
+
+### Integración continua (GitHub Actions)
+
+El proyecto incluye un pipeline de CI configurado en `.github/workflows/ci.yml`.
+
+Cada push o pull request a `main` dispara automáticamente:
+
+1. Levantar un contenedor PostgreSQL en la VM de GitHub Actions.
+2. Compilar la solución completa.
+3. Correr los 24 tests unitarios.
+4. Correr los 53 tests de integración contra la base de datos real.
+
+Si algún test falla, el pipeline queda en rojo y bloquea el merge.
+
+### Deploy continuo (Railway)
+
+Cada push a `main` que pasa el CI dispara un redeploy automático en Railway:
+
+- Railway detecta el push, clona el repositorio, y buildea la imagen usando el `Dockerfile` en la raíz.
+- La imagen resultante se despliega como contenedor con las variables de entorno configuradas en el dashboard de Railway.
+- Las migraciones de base de datos se aplican automáticamente al iniciar la aplicación.
 
 ---
 
@@ -553,7 +619,13 @@ dotnet ef database update --project .\TaskFlowPro.Infrastructure\TaskFlowPro.Inf
 
 ## Ejecutar el proyecto localmente
 
-Desde la raíz de la solución:
+Levantar las bases de datos:
+
+```powershell
+docker compose up -d
+```
+
+Ejecutar la API:
 
 ```powershell
 dotnet run --project .\TaskFlowPro.Api\TaskFlowPro.Api.csproj
@@ -569,7 +641,7 @@ http://localhost:5052/swagger
 
 ## Testing
 
-El proyecto incluye pruebas unitarias e integration tests con base de datos real.
+El proyecto incluye pruebas unitarias e integration tests con base de datos real, y un pipeline de CI que los corre automáticamente en cada push.
 
 Tecnologías utilizadas para testing:
 
@@ -584,6 +656,8 @@ Ejecutar todos los tests:
 ```powershell
 dotnet test
 ```
+
+> Requiere tener el Docker Compose corriendo localmente (`docker compose up -d`).
 
 ### Unit tests
 
@@ -706,6 +780,8 @@ TaskFlowPro.IntegrationTests   -> 53 tests correctos
 Total general                  -> 77 tests correctos
 ```
 
+El pipeline de CI corre estos mismos tests automáticamente en cada push a `main`.
+
 ---
 
 ## Pruebas realizadas
@@ -734,6 +810,7 @@ Se probaron los flujos principales desde Swagger:
 - Manejo de errores mediante middleware global.
 - Tests unitarios de lógica de aplicación.
 - Integration tests con base de datos real para Auth, Workspaces, Projects, Tasks y asignación de tareas.
+- CI automático con GitHub Actions (77 tests en cada push).
 - Deploy en Railway con PostgreSQL y migraciones automáticas.
 
 ---
@@ -757,12 +834,17 @@ Assignment (autoasignación + asignación por Owner/Admin)
   ↓
 Comments
   ↓
+Notifications (MongoDB)
+  ↓
 Centralized Authorization
   ↓
-Unit Testing
+Unit Testing (24 tests)
   ↓
-Integration Testing con base de datos real
+Integration Testing con base de datos real (53 tests)
   (Auth · Workspaces · Projects · Tasks · Task Assignment)
+  ↓
+CI con GitHub Actions
+  (77 tests automáticos en cada push a main)
   ↓
 Deploy en Railway
   (Docker · PostgreSQL · CI/CD automático)

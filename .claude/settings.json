@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(*)",
+      "Bash(git status)",
+      "Bash(git diff)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(dotnet build)",
+      "Bash(dotnet test)"
+    ],
+    "deny": [
+      "Bash(rm *)",
+      "Bash(rm -rf *)",
+      "Write(.env)",
+      "Write(.env.local)",
+      "Write(secrets/*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd C:\\Users\\long_\\Desktop\\TaskFlowPro && dotnet build && docker ps | findstr postgres && dotnet test"
+          }
+        ]
+      }
+    ]
+  }
+}

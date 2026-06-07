@@ -50,4 +50,6 @@ public interface ITaskService
         Guid taskId,
         AssignTaskRequest request
     );
+
+    Task<List<TaskResponse>> ObtenerTareasAsignadasAsync(Guid currentUserId);
 }

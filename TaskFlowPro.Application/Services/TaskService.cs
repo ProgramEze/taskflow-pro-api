@@ -308,6 +308,12 @@ public class TaskService : ITaskService
         return ToResponse(task);
     }
 
+    public async Task<List<TaskResponse>> ObtenerTareasAsignadasAsync(Guid currentUserId)
+    {
+        var tareas = await _taskRepository.ObtenerTareasAsignadasAsync(currentUserId);
+        return tareas.Select(ToResponse).ToList();
+    }
+
     private static TaskResponse ToResponse(TaskItem task)
     {
         return new TaskResponse

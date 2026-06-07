@@ -92,4 +92,12 @@ public class TaskRepository : ITaskRepository
                     .ThenInclude(workspace => workspace.Members)
             .FirstOrDefaultAsync(task => task.Id == taskId);
     }
+
+    public async Task<List<TaskItem>> ObtenerTareasAsignadasAsync(Guid usuarioId)
+    {
+        return await _context.TaskItems
+            .Where(task => task.AssignedUserId == usuarioId && task.IsActive)
+            .OrderByDescending(task => task.CreatedAt)
+            .ToListAsync();
+    }
 }

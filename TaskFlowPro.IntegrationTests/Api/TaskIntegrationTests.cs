@@ -411,4 +411,105 @@ public class TaskIntegrationTests : IClassFixture<CustomWebApplicationFactory>
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // GET /api/tasks/assigned-to-me
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private async Task<(HttpClient client, Guid workspaceId, Guid projectId, Guid userId)>
+        CreateAuthenticatedClientWithProjectAndUserIdAsync()
+    {
+        var client = _factory.CreateClient();
+
+        var email = $"user_{Guid.NewGuid():N}@example.com";
+        var registerResponse = await client.PostAsJsonAsync("/api/Auth/register", new
+        {
+            firstName = "Test",
+            lastName = "User",
+            email,
+            password = "Test1234!"
+        });
+        registerResponse.EnsureSuccessStatusCode();
+        var registerJson = JsonDocument.Parse(await registerResponse.Content.ReadAsStringAsync());
+        var token = registerJson.RootElement.GetProperty("token").GetString()!;
+        var userId = registerJson.RootElement.GetProperty("userId").GetGuid();
+        IntegrationTestHelper.SetBearerToken(client, token);
+
+        var workspaceResponse = await client.PostAsJsonAsync("/api/Workspaces", new
+        {
+            name = "Workspace para tareas asignadas",
+            description = "Workspace de soporte para tests de mis tareas"
+        });
+        workspaceResponse.EnsureSuccessStatusCode();
+        var workspaceJson = JsonDocument.Parse(await workspaceResponse.Content.ReadAsStringAsync());
+        var workspaceId = workspaceJson.RootElement.GetProperty("id").GetGuid();
+
+        var projectResponse = await client.PostAsJsonAsync(
+            $"/api/workspaces/{workspaceId}/projects", new
+            {
+                name = "Proyecto para tareas asignadas",
+                description = "Proyecto de soporte para tests de mis tareas"
+            });
+        projectResponse.EnsureSuccessStatusCode();
+        var projectJson = JsonDocument.Parse(await projectResponse.Content.ReadAsStringAsync());
+        var projectId = projectJson.RootElement.GetProperty("id").GetGuid();
+
+        return (client, workspaceId, projectId, userId);
+    }
+
+    [Fact]
+    public async Task ObtenerAsignadasAMi_SinToken_ReturnsUnauthorized()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/api/tasks/assigned-to-me");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task ObtenerAsignadasAMi_SinTareasAsignadas_ReturnsListaVacia()
+    {
+        var (client, _, _) = await CreateAuthenticatedClientWithProjectAsync();
+
+        var response = await client.GetAsync("/api/tasks/assigned-to-me");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        json.RootElement.GetArrayLength().Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ObtenerAsignadasAMi_ConTareaAsignada_ReturnsTarea()
+    {
+        var (client, _, projectId, userId) = await CreateAuthenticatedClientWithProjectAndUserIdAsync();
+        var taskId = await CreateTaskAndGetIdAsync(client, projectId, "Tarea asignada a mí");
+
+        await client.PatchAsJsonAsync($"/api/tasks/{taskId}/assign", new { assignedUserId = userId });
+
+        var response = await client.GetAsync("/api/tasks/assigned-to-me");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("Tarea asignada a mí");
+    }
+
+    [Fact]
+    public async Task ObtenerAsignadasAMi_TareaEliminada_NoAparece()
+    {
+        var (client, _, projectId, userId) = await CreateAuthenticatedClientWithProjectAndUserIdAsync();
+        var taskId = await CreateTaskAndGetIdAsync(client, projectId, "Tarea a eliminar");
+
+        await client.PatchAsJsonAsync($"/api/tasks/{taskId}/assign", new { assignedUserId = userId });
+        await client.DeleteAsync($"/api/tasks/{taskId}");
+
+        var response = await client.GetAsync("/api/tasks/assigned-to-me");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().NotContain("Tarea a eliminar");
+    }
 }

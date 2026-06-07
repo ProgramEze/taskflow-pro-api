@@ -139,4 +139,14 @@ public class TasksController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpGet("api/tasks/assigned-to-me")]
+    public async Task<IActionResult> ObtenerAsignadasAMi()
+    {
+        var currentUserId = User.GetCurrentUserId();
+
+        var response = await _taskService.ObtenerTareasAsignadasAsync(currentUserId);
+
+        return Ok(response);
+    }
 }

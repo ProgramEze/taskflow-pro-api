@@ -18,4 +18,6 @@ public interface ITaskRepository
     );
 
     Task<TaskItem?> GetByIdAsync(Guid taskId);
+
+    Task<List<TaskItem>> ObtenerTareasAsignadasAsync(Guid usuarioId);
 }

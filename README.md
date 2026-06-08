@@ -4,9 +4,9 @@
 
 TaskFlow Pro es una API REST desarrollada con ASP.NET Core para la gestión colaborativa de proyectos y tareas en equipos pequeños.
 
-El proyecto permite registrar usuarios, iniciar sesión con JWT, crear espacios de trabajo, administrar proyectos, gestionar miembros, crear tareas, asignarlas a usuarios, modificar su estado y prioridad, realizar bajas lógicas, agregar comentarios, consultar tareas mediante filtros, búsqueda y paginación, y recibir notificaciones almacenadas en MongoDB.
+El proyecto permite registrar usuarios, iniciar sesión con JWT, crear espacios de trabajo, administrar proyectos, gestionar miembros, crear tareas, asignarlas a usuarios, modificar su estado y prioridad, realizar bajas lógicas, agregar comentarios, consultar tareas mediante filtros, búsqueda y paginación, recibir notificaciones almacenadas en MongoDB, e interactuar con un agente de IA integrado capaz de ejecutar acciones reales sobre el sistema.
 
-Este proyecto forma parte de mi portfolio como desarrollador backend junior, aplicando buenas prácticas de arquitectura, autenticación, autorización, persistencia de datos, manejo global de errores, documentación de API, consultas paginadas, testing unitario, integration tests con base de datos real, y CI con GitHub Actions.
+Este proyecto forma parte de mi portfolio como desarrollador backend junior, aplicando buenas prácticas de arquitectura, autenticación, autorización, persistencia de datos, manejo global de errores, documentación de API, consultas paginadas, testing unitario, integration tests con base de datos real, CI con GitHub Actions, e integración de IA con Semantic Kernel y Google Gemini.
 
 > **Frontend web:** [taskflow-pro-frontend](https://github.com/ProgramEze/taskflow-pro-frontend)
 
@@ -46,6 +46,8 @@ https://taskflow-pro-frontend-production-5dc3.up.railway.app
 - Moq
 - FluentAssertions
 - Microsoft.AspNetCore.Mvc.Testing
+- Semantic Kernel 1.77.0
+- Google Gemini (gemini-2.5-flash)
 - Clean Architecture moderada
 
 ---
@@ -85,6 +87,8 @@ Contiene la lógica de aplicación:
 - Excepciones personalizadas
 - Modelos de respuesta paginada
 - Servicio centralizado de autorización por workspace
+- Agente de IA (IAgenteServicio, AgenteServicio)
+- Plugin de tareas para el agente (TareasPlugin)
 
 ### TaskFlowPro.Domain
 
@@ -326,6 +330,39 @@ DELETE /api/notifications/{id}
 
 ---
 
+### Agente de IA (Semantic Kernel + Google Gemini)
+
+- Agente conversacional integrado en la API con capacidad de ejecutar acciones reales.
+- Implementado con Microsoft Semantic Kernel 1.77.0 y Google Gemini (gemini-2.5-flash).
+- El agente recibe lenguaje natural y decide qué herramientas invocar según la intención del usuario.
+- Opera en el contexto del usuario autenticado mediante JWT.
+- Plugin de tareas con las siguientes herramientas disponibles:
+  - `ObtenerTareasAsignadas`: lista las tareas asignadas al usuario actual consultando PostgreSQL.
+  - `CrearTarea`: crea una nueva tarea en un proyecto dado.
+  - `AsignarTarea`: asigna una tarea existente a un usuario.
+
+Endpoint:
+
+```http
+POST /api/Agente/consultar
+```
+
+Ejemplo de request:
+
+```json
+"¿Cuáles son mis tareas asignadas?"
+```
+
+Ejemplo de respuesta:
+
+```text
+Tus tareas asignadas son:
+- [InReview] Implementar filtros de tareas (Prioridad: Urgent, ID: 8e060cbe-...)
+- [InProgress] Diseñar endpoints de autenticación (Prioridad: High, ID: 609b1dec-...)
+```
+
+---
+
 ## Autorización por workspace
 
 El proyecto incluye un servicio centralizado de autorización:
@@ -376,15 +413,11 @@ Comment
 User
   ↓
 Notification (MongoDB)
-```
 
-Un usuario puede crear workspaces.
-Un workspace contiene miembros.
-Un workspace contiene proyectos.
-Un proyecto contiene tareas.
-Una tarea puede asignarse a un miembro activo del workspace.
-Una tarea puede tener comentarios.
-Las notificaciones se almacenan en MongoDB de forma independiente.
+User (autenticado)
+  ↓
+Agente IA → TareasPlugin → TaskService → PostgreSQL
+```
 
 ---
 
@@ -578,6 +611,8 @@ Jwt__Key                            = <clave secreta>
 Jwt__Issuer                         = TaskFlowPro
 Jwt__Audience                       = TaskFlowProUsers
 Cors__AllowedOrigins__0             = https://taskflow-pro-frontend-production-5dc3.up.railway.app
+Gemini__ApiKey                      = <clave de Google AI Studio>
+Gemini__ModelId                     = gemini-2.5-flash
 ```
 
 ---
@@ -596,6 +631,23 @@ Ejemplo de configuración en `appsettings.json`:
 ```
 
 > Nota: en producción la clave JWT se maneja mediante variables de entorno, no en `appsettings.json`.
+
+---
+
+## Configuración del Agente de IA
+
+La API key de Gemini se configura localmente en `appsettings.Development.json` (ignorado por git):
+
+```json
+{
+  "Gemini": {
+    "ApiKey": "tu-api-key-de-google-ai-studio",
+    "ModelId": "gemini-2.5-flash"
+  }
+}
+```
+
+En producción se configura mediante variables de entorno en Railway.
 
 ---
 
@@ -784,37 +836,6 @@ El pipeline de CI corre estos mismos tests automáticamente en cada push a `main
 
 ---
 
-## Pruebas realizadas
-
-Se probaron los flujos principales desde Swagger:
-
-- Registro de usuario.
-- Login con JWT.
-- Acceso a endpoint protegido `/me`.
-- Creación y listado de workspaces.
-- Creación y listado de proyectos.
-- Creación, edición, cambio de estado, cambio de prioridad y baja lógica de tareas.
-- Creación, edición, listado y baja lógica de comentarios.
-- Gestión de miembros del workspace.
-- Cambio de roles de miembros.
-- Baja lógica de miembros.
-- Autoasignación de tareas por miembros.
-- Asignación de tareas a otros miembros por Owner/Admin.
-- Validación de conflicto al asignar una tarea ya asignada.
-- Validación de error al intentar asignar una tarea a un usuario externo al workspace.
-- Listado paginado de tareas.
-- Filtros de tareas por estado, prioridad y usuario asignado.
-- Búsqueda de tareas por texto.
-- Validación de errores de paginación.
-- Autorización centralizada en Projects, Tasks, Members y Comments.
-- Manejo de errores mediante middleware global.
-- Tests unitarios de lógica de aplicación.
-- Integration tests con base de datos real para Auth, Workspaces, Projects, Tasks y asignación de tareas.
-- CI automático con GitHub Actions (77 tests en cada push).
-- Deploy en Railway con PostgreSQL y migraciones automáticas.
-
----
-
 ## Estado actual del proyecto
 
 ```text
@@ -851,4 +872,7 @@ Deploy en Railway
   ↓
 Frontend web
   (Angular 17 · TailwindCSS · Deploy en Railway)
+  ↓
+Agente de IA
+  (Semantic Kernel 1.77.0 · Google Gemini · TareasPlugin)
 ```

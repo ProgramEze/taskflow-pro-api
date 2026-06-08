@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using TaskFlowPro.Application.Interfaces;
 
 namespace TaskFlowPro.Api.Controllers;
@@ -22,7 +23,11 @@ public class AgenteController : ControllerBase
         if (string.IsNullOrWhiteSpace(mensaje))
             return BadRequest("El mensaje no puede estar vacío.");
 
-        var respuesta = await _agenteServicio.EjecutarAsync(mensaje);
+        var usuarioIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(usuarioIdClaim, out var usuarioId))
+            return Unauthorized();
+
+        var respuesta = await _agenteServicio.EjecutarAsync(mensaje, usuarioId);
         return Ok(respuesta);
     }
 }

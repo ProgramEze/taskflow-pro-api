@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
+using Microsoft.SemanticKernel.Connectors.Google;
 using TaskFlowPro.Application.Interfaces;
 
 namespace TaskFlowPro.Application.Services;
@@ -12,11 +12,11 @@ public class AgenteServicio : IAgenteServicio
 
     public AgenteServicio(IConfiguration configuracion)
     {
-        var apiKey = configuracion["OpenAI:ApiKey"]!;
-        var modelId = configuracion["OpenAI:ModelId"]!;
+        var apiKey = configuracion["Gemini:ApiKey"]!;
+        var modelId = configuracion["Gemini:ModelId"]!;
 
         _kernel = Kernel.CreateBuilder()
-            .AddOpenAIChatCompletion(modelId, apiKey)
+            .AddGoogleAIGeminiChatCompletion(modelId, apiKey)
             .Build();
     }
 
@@ -28,7 +28,7 @@ public class AgenteServicio : IAgenteServicio
         historial.AddSystemMessage("Eres un asistente inteligente para gestionar tareas en TaskFlow Pro. Responde siempre en español.");
         historial.AddUserMessage(mensaje);
 
-        var configuracionEjecucion = new OpenAIPromptExecutionSettings
+        var configuracionEjecucion = new GeminiPromptExecutionSettings
         {
             FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
         };

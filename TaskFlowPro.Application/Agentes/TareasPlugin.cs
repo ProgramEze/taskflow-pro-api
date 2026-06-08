@@ -59,7 +59,7 @@ public class TareasPlugin
         [Description("ID de la tarea a asignar")] Guid tareaId,
         [Description("ID del usuario al que se asignará la tarea")] Guid usuarioId)
     {
-        var request = new AssignTaskRequest { AssignedToId = usuarioId };
+        var request = new AssignTaskRequest { AssignedUserId = usuarioId };
         var tarea = await _taskService.AssignAsync(_usuarioActualId, tareaId, request);
         return $"Tarea '{tarea.Title}' asignada correctamente al usuario {usuarioId}.";
     }
